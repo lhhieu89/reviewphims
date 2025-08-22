@@ -1,0 +1,234 @@
+import { env } from './env';
+import type {
+  YouTubeVideo,
+  YouTubeSearchItem,
+  YouTubeChannel,
+  ListResponse,
+  YouTubeError,
+} from '@/types/youtube';
+
+const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
+
+interface YouTubeApiError extends Error {
+  status?: number;
+  code?: string;
+}
+
+class YouTubeApiError extends Error {
+  constructor(message: string, status?: number, code?: string) {
+    super(message);
+    this.name = 'YouTubeApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+async function fetchYouTubeApi<T>(
+  endpoint: string,
+  params: Record<string, string>
+): Promise<T> {
+  const url = new URL(`${YOUTUBE_API_BASE}/${endpoint}`);
+
+  // Add API key and common parameters
+  url.searchParams.set('key', env.YOUTUBE_API_KEY);
+
+  // Add custom parameters
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  try {
+    const response = await fetch(url.toString(), {
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    });
+
+    if (!response.ok) {
+      const errorData: YouTubeError = await response.json();
+      const message = errorData.error?.message || 'YouTube API error';
+      const code =
+        errorData.error?.code?.toString() || response.status.toString();
+
+      throw new YouTubeApiError(message, response.status, code);
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error instanceof YouTubeApiError) {
+      throw error;
+    }
+
+    throw new YouTubeApiError(
+      `Failed to fetch from YouTube API: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+}
+
+export interface ListMostPopularParams {
+  regionCode?: string;
+  maxResults?: number;
+  pageToken?: string;
+  videoCategoryId?: string;
+}
+
+export async function listMostPopular({
+  regionCode = env.YOUTUBE_REGION_CODE,
+  maxResults = 20,
+  pageToken,
+  videoCategoryId,
+}: ListMostPopularParams = {}): Promise<ListResponse<YouTubeVideo>> {
+  const params: Record<string, string> = {
+    part: 'snippet,statistics,contentDetails',
+    chart: 'mostPopular',
+    regionCode,
+    maxResults: maxResults.toString(),
+  };
+
+  if (pageToken) {
+    params.pageToken = pageToken;
+  }
+
+  if (videoCategoryId) {
+    params.videoCategoryId = videoCategoryId;
+  }
+
+  return fetchYouTubeApi<ListResponse<YouTubeVideo>>('videos', params);
+}
+
+export interface SearchVideosParams {
+  q: string;
+  maxResults?: number;
+  pageToken?: string;
+  regionCode?: string;
+  order?: 'date' | 'rating' | 'relevance' | 'title' | 'viewCount';
+  videoCategoryId?: string;
+  videoDuration?: 'short' | 'medium' | 'long';
+  safeSearch?: 'none' | 'moderate' | 'strict';
+  relevanceLanguage?: string;
+  videoEmbeddable?: 'true' | 'any';
+}
+
+export async function searchVideos({
+  q,
+  maxResults = 20,
+  pageToken,
+  regionCode = env.YOUTUBE_REGION_CODE,
+  order = 'relevance',
+  videoCategoryId,
+  videoDuration,
+  safeSearch = 'moderate',
+  relevanceLanguage = 'vi',
+  videoEmbeddable = 'true',
+}: SearchVideosParams): Promise<ListResponse<YouTubeSearchItem>> {
+  const params: Record<string, string> = {
+    part: 'snippet',
+    type: 'video',
+    q: q,
+    maxResults: maxResults.toString(),
+    regionCode,
+    order,
+    safeSearch,
+    relevanceLanguage,
+    videoEmbeddable,
+  };
+
+  if (pageToken) {
+    params.pageToken = pageToken;
+  }
+
+  if (videoCategoryId) {
+    params.videoCategoryId = videoCategoryId;
+  }
+
+  if (videoDuration) {
+    params.videoDuration = videoDuration;
+  }
+
+  return fetchYouTubeApi<ListResponse<YouTubeSearchItem>>('search', params);
+}
+
+export interface GetVideoByIdParams {
+  id: string;
+}
+
+export async function getVideoById({
+  id,
+}: GetVideoByIdParams): Promise<YouTubeVideo | null> {
+  const params: Record<string, string> = {
+    part: 'snippet,contentDetails,statistics',
+    id,
+  };
+
+  const response = await fetchYouTubeApi<ListResponse<YouTubeVideo>>(
+    'videos',
+    params
+  );
+
+  return response.items[0] || null;
+}
+
+export interface GetChannelByIdParams {
+  id: string;
+}
+
+export async function getChannelById({
+  id,
+}: GetChannelByIdParams): Promise<YouTubeChannel | null> {
+  const params: Record<string, string> = {
+    part: 'snippet,statistics',
+    id,
+  };
+
+  const response = await fetchYouTubeApi<ListResponse<YouTubeChannel>>(
+    'channels',
+    params
+  );
+
+  return response.items[0] || null;
+}
+
+export interface ListRelatedVideosParams {
+  id: string;
+  maxResults?: number;
+}
+
+export async function listRelatedVideos({
+  id,
+  maxResults = 12,
+}: ListRelatedVideosParams): Promise<ListResponse<YouTubeSearchItem>> {
+  // Note: YouTube deprecated relatedToVideoId, so we'll search for videos from the same channel
+  // First get the video to find its channel
+  const video = await getVideoById({ id });
+
+  if (!video) {
+    return {
+      kind: 'youtube#searchListResponse',
+      etag: '',
+      pageInfo: { totalResults: 0, resultsPerPage: 0 },
+      items: [],
+    };
+  }
+
+  const params: Record<string, string> = {
+    part: 'snippet',
+    type: 'video',
+    channelId: video.snippet.channelId,
+    maxResults: (maxResults + 1).toString(), // Get one extra to filter out current video
+    order: 'relevance',
+  };
+
+  const response = await fetchYouTubeApi<ListResponse<YouTubeSearchItem>>(
+    'search',
+    params
+  );
+
+  // Filter out the current video and limit results
+  response.items = response.items
+    .filter((item) => item.id.videoId !== id)
+    .slice(0, maxResults);
+
+  return response;
+}
+
+export { YouTubeApiError };

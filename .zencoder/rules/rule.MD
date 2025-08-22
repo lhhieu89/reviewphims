@@ -1,0 +1,2 @@
+- Luôn phản hồi bằng tiếng Việt
+- Trang web này là trang tiếng Việt nên text sinh ra cũng hãy dùng tiếng Việt
