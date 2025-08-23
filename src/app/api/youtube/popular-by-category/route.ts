@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listMostPopular } from '@/lib/youtube';
 
+export const dynamic = 'force-dynamic';
+
 // Rate limiting
 const REQUEST_LIMIT = 100; // requests per minute
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
     const type = searchParams.get('type') || 'general';
     const maxResults = searchParams.get('maxResults')
       ? parseInt(searchParams.get('maxResults')!, 10)

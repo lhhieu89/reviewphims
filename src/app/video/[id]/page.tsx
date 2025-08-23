@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { VideoGrid } from '@/components/VideoGrid';
 import { VideoDescription } from '@/components/VideoDescription';
+import { YouTubePlayer } from '@/components/YouTubePlayer';
 import { env } from '@/lib/env';
 import {
   formatViewCount,
@@ -196,12 +197,10 @@ export default async function VideoPage({ params }: VideoPageProps) {
             <div className="lg:col-span-2">
               {/* Video player */}
               <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
-                <iframe
-                  src={`https://www.youtube-nocookie.com/embed/${params.id}?rel=0&modestbranding=1`}
+                <YouTubePlayer
+                  videoId={params.id}
                   title={video.snippet.title}
-                  className="absolute inset-0 w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
+                  className="rounded-lg"
                 />
               </div>
 

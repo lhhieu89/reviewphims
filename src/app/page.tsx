@@ -8,6 +8,7 @@ import {
 import { ReviewSection } from '@/components/ReviewSection';
 import { env } from '@/lib/env';
 
+export const dynamic = 'force-dynamic'; // Force dynamic rendering to avoid build-time API calls
 export const revalidate = 600; // 10 minutes
 
 export const metadata: Metadata = {
@@ -96,9 +97,9 @@ export default async function HomePage() {
   // Fetch different types of review content
   const [latestReviews, costumeDramaReviews, trailerVideos] = await Promise.all(
     [
-      getReviewVideos('general', 12),
-      getReviewVideos('costume_drama', 12),
-      getReviewVideos('trailers', 12),
+      getReviewVideos('general', 16),
+      getReviewVideos('costume_drama', 16),
+      getReviewVideos('trailers', 16),
     ]
   );
 
