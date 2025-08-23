@@ -15,7 +15,11 @@ declare global {
   }
 }
 
-export function YouTubePlayer({ videoId, title, className }: YouTubePlayerProps) {
+export function YouTubePlayer({
+  videoId,
+  title,
+  className,
+}: YouTubePlayerProps) {
   const playerRef = useRef<HTMLDivElement>(null);
   const playerInstanceRef = useRef<any>(null);
 
@@ -70,11 +74,13 @@ export function YouTubePlayer({ videoId, title, className }: YouTubePlayerProps)
     };
 
     // Load YouTube API if not already loaded
-    if (typeof window.YT === 'undefined' || typeof window.YT.Player === 'undefined') {
+    if (
+      typeof window.YT === 'undefined' ||
+      typeof window.YT.Player === 'undefined'
+    ) {
       // Create script tag to load YouTube API
       const tag = document.createElement('script');
       tag.src = 'https://www.youtube.com/player_api';
-      
       // Set up callback for when API is ready
       window.onYouTubePlayerAPIReady = () => {
         if (isMounted) {
