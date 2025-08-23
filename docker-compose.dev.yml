@@ -1,0 +1,27 @@
+# Docker Compose for Development Environment
+services:
+  review-phim-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: review-phim-dev
+    ports:
+      - "3001:3000"  # Map host 3001 to container 3000 for dev
+    environment:
+      - NODE_ENV=development
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - YOUTUBE_REGION_CODE=${YOUTUBE_REGION_CODE:-VN}
+      - SITE_URL=${SITE_URL:-http://localhost:3001}
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - review-phim-dev-network
+    command: npm run dev
+
+networks:
+  review-phim-dev-network:
+    driver: bridge

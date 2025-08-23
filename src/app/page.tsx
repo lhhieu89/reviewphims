@@ -11,7 +11,7 @@ import { env } from '@/lib/env';
 export const revalidate = 600; // 10 minutes
 
 export const metadata: Metadata = {
-  title: 'Review Phim - Trang chủ',
+  title: 'Review Phim - Xem Review Phim Mới Nhất 2025',
   description:
     'Khám phá những video review phim mới nhất và hay nhất từ YouTube. Tìm kiếm, xem và chia sẻ những bộ phim được đánh giá cao.',
   alternates: {
@@ -94,19 +94,16 @@ async function getReviewVideos(
 
 export default async function HomePage() {
   // Fetch different types of review content
-  const [
-    latestReviews,
-    costumeDramaReviews,
-    trailerVideos,
-  ] = await Promise.all([
-    getReviewVideos('general', 12),
-    getReviewVideos('costume_drama', 12),
-    getReviewVideos('trailers', 12),
-  ]);
+  const [latestReviews, costumeDramaReviews, trailerVideos] = await Promise.all(
+    [
+      getReviewVideos('general', 12),
+      getReviewVideos('costume_drama', 12),
+      getReviewVideos('trailers', 12),
+    ]
+  );
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-16">
-
       {/* Latest Reviews */}
       <ReviewSection
         title="📺 Review Phim Mới Nhất"

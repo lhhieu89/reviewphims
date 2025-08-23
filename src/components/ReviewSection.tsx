@@ -63,14 +63,14 @@ export function ReviewSection({
           </h3>
           <p className="text-muted-foreground">{error}</p>
           {fallbackUrl && (
-            <Link
+            <a
               href={fallbackUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               Xem trên YouTube
-            </Link>
+            </a>
           )}
         </div>
       </section>
@@ -84,7 +84,7 @@ export function ReviewSection({
           <h2 className="text-2xl font-bold text-foreground">{title}</h2>
           {viewAllLink && (
             <Link
-              href={viewAllLink}
+              href={viewAllLink as any}
               className="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
             >
               Xem tất cả →

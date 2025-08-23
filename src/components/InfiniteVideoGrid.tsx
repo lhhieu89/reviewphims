@@ -19,7 +19,9 @@ export function InfiniteVideoGrid({
   className = '',
 }: InfiniteVideoGridProps) {
   const [videos, setVideos] = useState<VideoCardData[]>(initialVideos);
-  const [nextPageToken, setNextPageToken] = useState<string | undefined>(initialNextPageToken);
+  const [nextPageToken, setNextPageToken] = useState<string | undefined>(
+    initialNextPageToken
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -41,16 +43,18 @@ export function InfiniteVideoGrid({
       });
 
       const response = await fetch(`/api/youtube/search?${params.toString()}`);
-      
+
       if (!response.ok) {
         if (response.status === 503) {
-          throw new Error('YouTube API quota exceeded. Please try again later.');
+          throw new Error(
+            'YouTube API quota exceeded. Please try again later.'
+          );
         }
         throw new Error('Failed to load more videos');
       }
 
       const data = await response.json();
-      
+
       const newVideos: VideoCardData[] = data.items.map((item: any) => ({
         id: item.id.videoId,
         title: item.snippet.title,
@@ -60,12 +64,12 @@ export function InfiniteVideoGrid({
       }));
 
       // Filter out duplicates based on video ID
-      setVideos(prev => {
-        const existingIds = new Set(prev.map(v => v.id));
-        const uniqueNewVideos = newVideos.filter(v => !existingIds.has(v.id));
+      setVideos((prev) => {
+        const existingIds = new Set(prev.map((v) => v.id));
+        const uniqueNewVideos = newVideos.filter((v) => !existingIds.has(v.id));
         return [...prev, ...uniqueNewVideos];
       });
-      
+
       // Update pagination
       if (data.nextPageToken) {
         setNextPageToken(data.nextPageToken);
@@ -89,11 +93,17 @@ export function InfiniteVideoGrid({
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-    
+
     const observer = new IntersectionObserver(
       (entries) => {
         const target = entries[0];
-        if (target.isIntersecting && !isLoadingRef.current && !loading && nextPageToken && hasMore) {
+        if (
+          target.isIntersecting &&
+          !isLoadingRef.current &&
+          !loading &&
+          nextPageToken &&
+          hasMore
+        ) {
           // Debounce to prevent multiple rapid calls
           clearTimeout(timeoutId);
           timeoutId = setTimeout(() => {

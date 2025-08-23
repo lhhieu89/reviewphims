@@ -1,16 +1,8 @@
 // Keywords for different types of movie reviews
 export const REVIEW_KEYWORDS = {
-  general: [
-    'Review phim 2025',
-  ],
-  costume_drama: [
-    'review phim cung đấu',
-    'review phim cung đấu 2025',
-  ],
-  trailers: [
-    'phim moi 2025 trailer',
-    'teaser phim moi',
-  ],
+  general: ['Review phim 2025'],
+  costume_drama: ['review phim cung đấu', 'review phim cung đấu 2025'],
+  trailers: ['phim moi 2025 trailer', 'teaser phim moi'],
 };
 
 export const MOVIE_CATEGORIES = {

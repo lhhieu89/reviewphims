@@ -1,6 +1,6 @@
 # Review Phim - YouTube Video Browser
 
-A modern, production-ready Next.js application for browsing and discovering YouTube videos with a focus on Vietnamese content. Built with Next.js 14, TypeScript, and Tailwind CSS.
+A modern, production-ready Next.js application for browsing and discovering YouTube videos with a focus on Vietnamese content. Built with Next.js 14, TypeScript, and Tailwind CSS with Docker deployment.
 
 ## Features
 
@@ -13,6 +13,8 @@ A modern, production-ready Next.js application for browsing and discovering YouT
 - 📊 SEO optimized with structured data
 - 🚀 Rate limiting and error handling
 - ♿ Accessibility features
+- 🐳 Docker deployment ready
+- 💊 Health check endpoint
 
 ## Tech Stack
 
@@ -23,6 +25,7 @@ A modern, production-ready Next.js application for browsing and discovering YouT
 - **Testing**: Vitest
 - **Linting**: ESLint + Prettier
 - **Icons**: Heroicons
+- **Deployment**: Docker + Docker Compose
 
 ## Getting Started
 
@@ -82,12 +85,12 @@ YOUTUBE_REGION_CODE=VN
 SITE_URL=http://localhost:3000
 ```
 
-For production (Vercel):
+For production (Docker):
 
 ```env
 YOUTUBE_API_KEY=your_actual_api_key_here
 YOUTUBE_REGION_CODE=VN
-SITE_URL=https://your-domain.com
+SITE_URL=https://your-domain.com:3001
 ```
 
 5. Run the development server:
@@ -100,6 +103,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ## Available Scripts
 
+### Development
 - `pnpm dev` - Start development server
 - `pnpm build` - Build for production
 - `pnpm start` - Start production server
@@ -109,6 +113,17 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 - `pnpm test` - Run tests
 - `pnpm test:watch` - Run tests in watch mode
 - `pnpm type-check` - Run TypeScript type checking
+
+### Docker
+- `pnpm docker:build` - Build Docker image
+- `pnpm docker:run` - Run Docker container locally
+- `pnpm docker:dev` - Start development with Docker Compose
+- `pnpm docker:prod` - Start production with Docker Compose
+
+### Deployment
+- `pnpm deploy:staging` - Deploy to staging server
+- `pnpm deploy:production` - Deploy to production server
+- `pnpm rollback` - Rollback to previous version
 
 ## Project Structure
 
@@ -147,6 +162,7 @@ All YouTube API calls are handled server-side through these endpoints:
 - `GET /api/youtube/video` - Get video details
 - `GET /api/youtube/channel` - Get channel details
 - `GET /api/youtube/related` - Get related videos
+- `GET /api/health` - Health check endpoint
 
 ## YouTube API Quota Management
 
@@ -187,24 +203,54 @@ The YouTube Data API v3 has daily quota limits. Here are strategies to optimize 
 
 ## Deployment
 
-### Vercel (Recommended)
+### Docker (Recommended)
 
-1. Connect your repository to Vercel
-2. Set environment variables in Vercel dashboard:
-   - `YOUTUBE_API_KEY`
-   - `YOUTUBE_REGION_CODE`
-   - `SITE_URL`
-3. Deploy
+The application is containerized for easy deployment on any server with Docker.
+
+#### Quick Deploy
+
+1. **Deploy to staging:**
+   ```bash
+   ./scripts/deploy.sh staging YOUR-SERVER-IP USERNAME
+   ```
+
+2. **Deploy to production:**
+   ```bash
+   ./scripts/deploy.sh production YOUR-SERVER-IP USERNAME
+   ```
+
+3. **Rollback if needed:**
+   ```bash
+   ./scripts/rollback.sh YOUR-SERVER-IP USERNAME
+   ```
+
+#### Setup Requirements
+
+- Docker and Docker Compose on target server
+- SSH access to the server
+- Port 3001 available (configurable)
+
+#### Environment Configuration
+
+Create `.env.staging` or `.env.production`:
+```bash
+NODE_ENV=production
+YOUTUBE_API_KEY=your_actual_api_key_here
+YOUTUBE_REGION_CODE=VN
+SITE_URL=http://your-domain.com:3001
+```
+
+**📖 For detailed deployment guide, see: [README_DOCKER_DEPLOYMENT.md](README_DOCKER_DEPLOYMENT.md)**
 
 ### Other Platforms
 
-The application is built to be platform-agnostic and can be deployed to:
+The application can also be deployed to:
 
-- Netlify
 - Railway
-- DigitalOcean App Platform
-- AWS Amplify
-- Any Node.js hosting service
+- DigitalOcean App Platform  
+- AWS ECS/Fargate
+- Any Docker-compatible hosting service
+- Traditional VPS with Docker
 
 ## Environment Variables
 
@@ -222,6 +268,8 @@ The application is built to be platform-agnostic and can be deployed to:
 - **Rate Limiting**: Prevents API abuse
 - **Error Boundaries**: Graceful error handling
 - **SEO Optimization**: Meta tags, structured data, sitemap
+- **Docker Multi-stage Build**: Optimized production images
+- **Health Checks**: Automatic container health monitoring
 
 ## Browser Support
 

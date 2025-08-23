@@ -43,10 +43,12 @@ export async function GET(request: NextRequest) {
         searchQuery = getRandomKeyword('costume_drama');
         break;
       case 'international':
-        searchQuery = getRandomKeyword('international');
+        // Fallback to general for international
+        searchQuery = getRandomKeyword('general');
         break;
       case 'genres':
-        searchQuery = getRandomKeyword('genres');
+        // Fallback to general for genres
+        searchQuery = getRandomKeyword('general');
         break;
       case 'trailers':
         searchQuery = getRandomKeyword('trailers');

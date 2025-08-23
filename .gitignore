@@ -50,9 +50,11 @@ jspm_packages/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.staging
+.env.production
 
-# Vercel
-.vercel
+# Docker
+.docker/
 
 # Testing
 /coverage/

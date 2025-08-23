@@ -45,9 +45,7 @@ export async function generateMetadata({
   };
 }
 
-async function searchVideos(
-  query: string
-): Promise<{
+async function searchVideos(query: string): Promise<{
   videos: VideoCardData[];
   nextPageToken?: string;
   totalResults?: number;

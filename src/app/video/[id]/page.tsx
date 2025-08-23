@@ -46,7 +46,7 @@ async function getVideoData(id: string): Promise<{
     const video: YouTubeVideo = await videoResponse.json();
 
     // Fetch channel details - TEMPORARILY DISABLED TO REDUCE API REQUESTS
-    let channel: YouTubeChannel | null = null;
+    const channel: YouTubeChannel | null = null;
     // try {
     //   const channelResponse = await fetch(
     //     `${env.SITE_URL}/api/youtube/channel?id=${video.snippet.channelId}`,
