@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchVideos } from '@/lib/youtube';
 import { rateLimiter } from '@/lib/rate-limiter';
+import { logQuotaUsage } from '@/lib/quota';
 import {
   REVIEW_KEYWORDS,
   getRandomKeyword,
@@ -55,43 +56,12 @@ export async function GET(request: NextRequest) {
         break;
       case 'mixed':
       default:
-        // Use multiple searches and combine results
+        // Use single random keyword from mixed categories to save quota
         const keywords = getMixedKeywords();
-        const resultsPerKeyword = Math.ceil(maxResults / keywords.length);
-
-        const searchPromises = keywords.map((keyword) =>
-          searchVideos({
-            q: keyword,
-            maxResults: resultsPerKeyword,
-            order: 'relevance', // Use relevance instead of date
-            regionCode: 'VN',
-          })
-        );
-
-        const results = await Promise.all(searchPromises);
-
-        // Combine and shuffle results
-        const allVideos = results.flatMap((result) => result.items || []);
-        const shuffled = allVideos.sort(() => Math.random() - 0.5);
-
-        return NextResponse.json(
-          {
-            items: shuffled.slice(0, maxResults),
-            kind: 'youtube#searchListResponse',
-            pageInfo: {
-              totalResults: shuffled.length,
-              resultsPerPage: maxResults,
-            },
-            searchQuery: keywords.join(', '),
-          },
-          {
-            headers: {
-              'Cache-Control':
-                'public, s-maxage=300, stale-while-revalidate=600',
-              'X-RateLimit-Remaining': remaining.toString(),
-            },
-          }
-        );
+        const randomKeyword =
+          keywords[Math.floor(Math.random() * keywords.length)];
+        searchQuery = randomKeyword;
+        break;
     }
 
     // Single keyword search
@@ -102,6 +72,9 @@ export async function GET(request: NextRequest) {
       regionCode: 'VN',
     });
 
+    // Log quota usage
+    logQuotaUsage(`reviews-${type}`, 100);
+
     return NextResponse.json(
       {
         ...data,
@@ -109,7 +82,7 @@ export async function GET(request: NextRequest) {
       },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+          'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
           'X-RateLimit-Remaining': remaining.toString(),
         },
       }
