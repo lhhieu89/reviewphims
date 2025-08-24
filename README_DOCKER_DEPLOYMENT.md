@@ -18,6 +18,7 @@
 ## 🛠️ **Server Requirements**
 
 ### **Cài đặt Docker trên server:**
+
 ```bash
 # Ubuntu/Debian
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -31,6 +32,7 @@ sudo apt install docker-compose -y
 ```
 
 ### **Cấu hình SSH Key (nếu chưa có):**
+
 ```bash
 # Trên local machine
 ssh-copy-id user@your-server-ip
@@ -44,26 +46,30 @@ ssh user@your-server-ip "echo 'SSH OK'"
 ## 🚀 **Deployment Commands**
 
 ### **1. Deploy to Staging:**
+
 ```bash
 ./scripts/deploy.sh staging YOUR-SERVER-IP USERNAME
 ```
 
 ### **2. Deploy to Production:**
+
 ```bash
 ./scripts/deploy.sh production YOUR-SERVER-IP USERNAME
 ```
 
 ### **3. Rollback (nếu có lỗi):**
+
 ```bash
 ./scripts/rollback.sh YOUR-SERVER-IP USERNAME
 ```
 
 ### **Examples:**
+
 ```bash
 # Deploy staging
 ./scripts/deploy.sh staging 192.168.1.100 ubuntu
 
-# Deploy production  
+# Deploy production
 ./scripts/deploy.sh production 192.168.1.100 root
 
 # Rollback
@@ -77,6 +83,7 @@ ssh user@your-server-ip "echo 'SSH OK'"
 ### **Environment Variables:**
 
 **File: `.env.staging`**
+
 ```bash
 NODE_ENV=production
 YOUTUBE_API_KEY=your-youtube-api-key
@@ -85,6 +92,7 @@ SITE_URL=http://staging-domain.com:3001
 ```
 
 **File: `.env.production`**
+
 ```bash
 NODE_ENV=production
 YOUTUBE_API_KEY=your-youtube-api-key
@@ -93,6 +101,7 @@ SITE_URL=http://your-domain.com:3001
 ```
 
 ### **Port Configuration:**
+
 - **Internal Container Port:** 3001
 - **External Port:** 3001
 - **Nginx/Apache Proxy:** Port 3001 → 80/443
@@ -107,7 +116,7 @@ Nếu muốn dùng domain without port:
 server {
     listen 80;
     server_name your-domain.com;
-    
+
     location / {
         proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
@@ -127,11 +136,13 @@ server {
 ## 📊 **Health Check & Monitoring**
 
 ### **Health Check URL:**
+
 ```bash
 curl http://your-server:3001/api/health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "ok",
@@ -145,6 +156,7 @@ curl http://your-server:3001/api/health
 ```
 
 ### **Server Management Commands:**
+
 ```bash
 # SSH vào server
 ssh user@server-ip
@@ -170,6 +182,7 @@ cd /opt/review-phim && docker-compose up -d --build
 ## 🏗️ **Development Workflow**
 
 ### **Local Development:**
+
 ```bash
 # Build and test Docker locally
 npm run docker:build
@@ -180,6 +193,7 @@ npm run docker:dev
 ```
 
 ### **Staging → Production:**
+
 ```bash
 # 1. Deploy to staging
 ./scripts/deploy.sh staging 192.168.1.100 ubuntu
@@ -203,12 +217,13 @@ Server với nhiều domains:
 ```
 Server IP: 192.168.1.100
 ├── review-phim    → Port 3001
-├── blog-app       → Port 3002  
+├── blog-app       → Port 3002
 ├── shop-app       → Port 3003
 └── admin-panel    → Port 3004
 ```
 
 **Nginx routing:**
+
 ```nginx
 # review-phim.com → Port 3001
 server {
@@ -216,7 +231,7 @@ server {
     location / { proxy_pass http://localhost:3001; }
 }
 
-# blog.com → Port 3002  
+# blog.com → Port 3002
 server {
     server_name blog.com;
     location / { proxy_pass http://localhost:3002; }
@@ -230,6 +245,7 @@ server {
 ### **Common Issues:**
 
 #### **1. Port Already in Use:**
+
 ```bash
 # Check what's using port 3001
 sudo netstat -tulpn | grep :3001
@@ -239,6 +255,7 @@ sudo fuser -k 3001/tcp
 ```
 
 #### **2. Docker Build Failed:**
+
 ```bash
 # Clean Docker cache
 docker system prune -a
@@ -248,6 +265,7 @@ docker-compose build --no-cache
 ```
 
 #### **3. Container Won't Start:**
+
 ```bash
 # Check logs
 docker-compose logs review-phim
@@ -261,6 +279,7 @@ docker-compose up -d
 ```
 
 #### **4. Health Check Failed:**
+
 ```bash
 # Test locally first
 curl http://localhost:3001/api/health
@@ -274,6 +293,7 @@ docker-compose exec review-phim env | grep YOUTUBE
 ## 📈 **Production Checklist**
 
 ### **Before Deploy:**
+
 - [ ] Environment variables configured
 - [ ] SSH key setup
 - [ ] Server has Docker installed
@@ -281,6 +301,7 @@ docker-compose exec review-phim env | grep YOUTUBE
 - [ ] Health check working locally
 
 ### **After Deploy:**
+
 - [ ] Health check returns "ok"
 - [ ] App accessible via browser
 - [ ] YouTube API working
@@ -292,21 +313,25 @@ docker-compose exec review-phim env | grep YOUTUBE
 ## 🚨 **Emergency Commands**
 
 ### **Quick Rollback:**
+
 ```bash
 ./scripts/rollback.sh SERVER-IP USERNAME
 ```
 
 ### **Force Restart:**
+
 ```bash
 ssh user@server "cd /opt/review-phim && docker-compose restart"
 ```
 
 ### **Check Logs:**
+
 ```bash
 ssh user@server "cd /opt/review-phim && docker-compose logs --tail=50"
 ```
 
 ### **Complete Reset:**
+
 ```bash
 ssh user@server "cd /opt/review-phim && docker-compose down && docker system prune -f && docker-compose up -d"
 ```
@@ -316,6 +341,7 @@ ssh user@server "cd /opt/review-phim && docker-compose down && docker system pru
 ## 🎉 **Ready to Deploy!**
 
 **One-Command Deploy:**
+
 ```bash
 ./scripts/deploy.sh production YOUR-SERVER-IP YOUR-USERNAME
 ```

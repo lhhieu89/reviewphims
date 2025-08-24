@@ -10,7 +10,7 @@ import {
   crawlVideoById,
   crawlSearchVideos,
   crawlRelatedVideos,
-  crawlMostPopular
+  crawlMostPopular,
 } from './youtube-crawler';
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
@@ -170,7 +170,10 @@ export async function searchVideos({
   }
 
   try {
-    return await fetchYouTubeApi<ListResponse<YouTubeSearchItem>>('search', params);
+    return await fetchYouTubeApi<ListResponse<YouTubeSearchItem>>(
+      'search',
+      params
+    );
   } catch (error) {
     // Nếu hết quota API, sử dụng phương pháp crawl
     if (isQuotaExceededError(error)) {

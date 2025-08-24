@@ -6,7 +6,9 @@ import { Suspense } from 'react';
 import { VideoGrid } from '@/components/VideoGrid';
 import { VideoDescription } from '@/components/VideoDescription';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
-import RelatedVideos, { RelatedVideosSkeleton } from '@/components/RelatedVideos';
+import RelatedVideos, {
+  RelatedVideosSkeleton,
+} from '@/components/RelatedVideos';
 import { env } from '@/lib/env';
 import {
   formatViewCount,
@@ -229,7 +231,9 @@ export default async function VideoPage({ params }: VideoPageProps) {
                         {formatViewCount(video.statistics.likeCount)} lượt thích
                       </span>
                     )}
-                    <span className="hidden">{formatRelativeTime(video.snippet.publishedAt)}</span>
+                    <span className="hidden">
+                      {formatRelativeTime(video.snippet.publishedAt)}
+                    </span>
                   </div>
                 </div>
 

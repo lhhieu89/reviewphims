@@ -2,7 +2,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { env } from '@/lib/env';
 import { formatRelativeTime, getBestThumbnail } from '@/lib/format';
-import type { ListResponse, YouTubeSearchItem, VideoCardData } from '@/types/youtube';
+import type {
+  ListResponse,
+  YouTubeSearchItem,
+  VideoCardData,
+} from '@/types/youtube';
 
 interface RelatedVideosProps {
   videoId: string;
@@ -20,13 +24,15 @@ async function getRelatedVideos(videoId: string): Promise<VideoCardData[]> {
     }
 
     const data: ListResponse<YouTubeSearchItem> = await response.json();
-    return data.items.map((item): VideoCardData => ({
-      id: item.id.videoId,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
-      publishedAt: item.snippet.publishedAt,
-      thumbnails: item.snippet.thumbnails,
-    }));
+    return data.items.map(
+      (item): VideoCardData => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channelTitle: item.snippet.channelTitle,
+        publishedAt: item.snippet.publishedAt,
+        thumbnails: item.snippet.thumbnails,
+      })
+    );
   } catch (error) {
     console.error('Error fetching related videos:', error);
     return [];
@@ -38,10 +44,7 @@ function RelatedVideosSkeleton() {
   return (
     <div className="space-y-4">
       {[...Array(6)].map((_, i) => (
-        <div
-          key={i}
-          className="flex gap-3 animate-pulse"
-        >
+        <div key={i} className="flex gap-3 animate-pulse">
           <div className="w-40 aspect-video bg-muted rounded" />
           <div className="flex-1">
             <div className="h-4 bg-muted rounded w-3/4 mb-2" />
@@ -59,9 +62,7 @@ export default async function RelatedVideos({ videoId }: RelatedVideosProps) {
 
   if (relatedVideos.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
-        Không có video liên quan
-      </p>
+      <p className="text-muted-foreground text-sm">Không có video liên quan</p>
     );
   }
 
@@ -100,4 +101,4 @@ export default async function RelatedVideos({ videoId }: RelatedVideosProps) {
 }
 
 // Export loading component for use with Suspense
-export { RelatedVideosSkeleton }; 
+export { RelatedVideosSkeleton };

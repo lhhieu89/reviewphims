@@ -104,6 +104,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 ## Available Scripts
 
 ### Development
+
 - `pnpm dev` - Start development server
 - `pnpm build` - Build for production
 - `pnpm start` - Start production server
@@ -115,12 +116,14 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 - `pnpm type-check` - Run TypeScript type checking
 
 ### Docker
+
 - `pnpm docker:build` - Build Docker image
 - `pnpm docker:run` - Run Docker container locally
 - `pnpm docker:dev` - Start development with Docker Compose
 - `pnpm docker:prod` - Start production with Docker Compose
 
 ### Deployment
+
 - `pnpm deploy:staging` - Deploy to staging server
 - `pnpm deploy:production` - Deploy to production server
 - `pnpm rollback` - Rollback to previous version
@@ -210,11 +213,13 @@ The application is containerized for easy deployment on any server with Docker.
 #### Quick Deploy
 
 1. **Deploy to staging:**
+
    ```bash
    ./scripts/deploy.sh staging YOUR-SERVER-IP USERNAME
    ```
 
 2. **Deploy to production:**
+
    ```bash
    ./scripts/deploy.sh production YOUR-SERVER-IP USERNAME
    ```
@@ -233,6 +238,7 @@ The application is containerized for easy deployment on any server with Docker.
 #### Environment Configuration
 
 Create `.env.staging` or `.env.production`:
+
 ```bash
 NODE_ENV=production
 YOUTUBE_API_KEY=your_actual_api_key_here
@@ -247,7 +253,7 @@ SITE_URL=http://your-domain.com:3001
 The application can also be deployed to:
 
 - Railway
-- DigitalOcean App Platform  
+- DigitalOcean App Platform
 - AWS ECS/Fargate
 - Any Docker-compatible hosting service
 - Traditional VPS with Docker

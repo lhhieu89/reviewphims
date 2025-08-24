@@ -41,7 +41,9 @@ async function fetchHTML(url: string): Promise<Document | null> {
     });
 
     if (!response.ok) {
-      console.error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+      console.error(
+        `Failed to fetch ${url}: ${response.status} ${response.statusText}`
+      );
       return null;
     }
 
@@ -84,9 +86,9 @@ function extractYtInitialData(document: Document): any {
  */
 function parsePublishedTime(publishedAtText: string | null): string {
   if (!publishedAtText) return new Date().toISOString();
-  
+
   const now = new Date();
-  
+
   // Xử lý các định dạng thời gian tiếng Việt
   if (publishedAtText.includes('giây')) {
     const seconds = parseInt(publishedAtText.match(/(\d+)\s+giây/)?.[1] || '0');
@@ -102,7 +104,7 @@ function parsePublishedTime(publishedAtText: string | null): string {
     now.setDate(now.getDate() - days);
   } else if (publishedAtText.includes('tuần')) {
     const weeks = parseInt(publishedAtText.match(/(\d+)\s+tuần/)?.[1] || '0');
-    now.setDate(now.getDate() - (weeks * 7));
+    now.setDate(now.getDate() - weeks * 7);
   } else if (publishedAtText.includes('tháng')) {
     const months = parseInt(publishedAtText.match(/(\d+)\s+tháng/)?.[1] || '0');
     now.setMonth(now.getMonth() - months);
@@ -110,7 +112,7 @@ function parsePublishedTime(publishedAtText: string | null): string {
     const years = parseInt(publishedAtText.match(/(\d+)\s+năm/)?.[1] || '0');
     now.setFullYear(now.getFullYear() - years);
   }
-  
+
   return now.toISOString();
 }
 
@@ -119,16 +121,16 @@ function parsePublishedTime(publishedAtText: string | null): string {
  */
 function formatDuration(durationText: string | null): string {
   if (!durationText) return 'PT0S';
-  
+
   // Nếu đã ở định dạng ISO 8601 thì trả về nguyên bản
   if (durationText.startsWith('PT')) {
     return durationText;
   }
-  
+
   // Chuyển đổi từ "HH:MM:SS" sang "PTHMS"
-  const parts = durationText.split(':').map(part => parseInt(part));
+  const parts = durationText.split(':').map((part) => parseInt(part));
   let duration = 'PT';
-  
+
   if (parts.length === 3) {
     duration += `${parts[0]}H${parts[1]}M${parts[2]}S`;
   } else if (parts.length === 2) {
@@ -136,7 +138,7 @@ function formatDuration(durationText: string | null): string {
   } else if (parts.length === 1) {
     duration += `${parts[0]}S`;
   }
-  
+
   return duration;
 }
 
@@ -178,43 +180,59 @@ function createThumbnails(videoId: string): YouTubeThumbnails {
  */
 export async function crawlVideoById(id: string): Promise<YouTubeVideo | null> {
   console.log(`[YouTube Crawler] Crawling video: ${id}`);
-  
+
   const url = `https://www.youtube.com/watch?v=${id}`;
   const document = await fetchHTML(url);
-  
+
   if (!document) return null;
-  
+
   const ytData = extractYtInitialData(document);
   if (!ytData) return null;
-  
+
   try {
     // Lấy thông tin video từ cấu trúc dữ liệu
-    const videoData = ytData.contents?.twoColumnWatchNextResults?.results?.results?.contents?.[0]?.videoPrimaryInfoRenderer;
-    const videoSecondaryInfo = ytData.contents?.twoColumnWatchNextResults?.results?.results?.contents?.[1]?.videoSecondaryInfoRenderer;
-    
+    const videoData =
+      ytData.contents?.twoColumnWatchNextResults?.results?.results
+        ?.contents?.[0]?.videoPrimaryInfoRenderer;
+    const videoSecondaryInfo =
+      ytData.contents?.twoColumnWatchNextResults?.results?.results
+        ?.contents?.[1]?.videoSecondaryInfoRenderer;
+
     if (!videoData) return null;
-    
+
     // Lấy tiêu đề
     const title = videoData.title?.runs?.[0]?.text || '';
-    
+
     // Lấy tên kênh
-    const channelTitle = videoSecondaryInfo?.owner?.videoOwnerRenderer?.title?.runs?.[0]?.text || '';
-    const channelId = videoSecondaryInfo?.owner?.videoOwnerRenderer?.navigationEndpoint?.browseEndpoint?.browseId || '';
-    
+    const channelTitle =
+      videoSecondaryInfo?.owner?.videoOwnerRenderer?.title?.runs?.[0]?.text ||
+      '';
+    const channelId =
+      videoSecondaryInfo?.owner?.videoOwnerRenderer?.navigationEndpoint
+        ?.browseEndpoint?.browseId || '';
+
     // Lấy lượt xem
-    const viewCountText = videoData.viewCount?.videoViewCountRenderer?.viewCount?.simpleText || 
-                         videoData.viewCount?.videoViewCountRenderer?.shortViewCount?.simpleText || '0';
+    const viewCountText =
+      videoData.viewCount?.videoViewCountRenderer?.viewCount?.simpleText ||
+      videoData.viewCount?.videoViewCountRenderer?.shortViewCount?.simpleText ||
+      '0';
     const viewCount = viewCountText.replace(/[^\d]/g, '');
-    
+
     // Lấy thời gian đăng tải
     const publishedAtText = videoData.dateText?.simpleText || null;
-    
+
     // Lấy mô tả
-    const description = videoSecondaryInfo?.description?.runs?.map((run: any) => run.text).join('') || '';
-    
+    const description =
+      videoSecondaryInfo?.description?.runs
+        ?.map((run: any) => run.text)
+        .join('') || '';
+
     // Lấy thời lượng video
-    const durationText = document.querySelector('meta[itemprop="duration"]')?.getAttribute('content') || null;
-    
+    const durationText =
+      document
+        .querySelector('meta[itemprop="duration"]')
+        ?.getAttribute('content') || null;
+
     // Tạo đối tượng video
     const video: YouTubeVideo = {
       kind: 'youtube#video',
@@ -245,12 +263,15 @@ export async function crawlVideoById(id: string): Promise<YouTubeVideo | null> {
       },
       statistics: {
         viewCount,
-        likeCount: videoData.videoActions?.menuRenderer?.topLevelButtons?.[0]?.segmentedLikeDislikeButtonRenderer?.likeButton?.toggleButtonRenderer?.defaultText?.simpleText || '0',
+        likeCount:
+          videoData.videoActions?.menuRenderer?.topLevelButtons?.[0]
+            ?.segmentedLikeDislikeButtonRenderer?.likeButton
+            ?.toggleButtonRenderer?.defaultText?.simpleText || '0',
         favoriteCount: '0',
         commentCount: '0',
       },
     };
-    
+
     return video;
   } catch (error) {
     console.error(`Error parsing video data for ${id}:`, error);
@@ -266,12 +287,12 @@ export async function crawlSearchVideos(
   maxResults: number = 20
 ): Promise<ListResponse<YouTubeSearchItem>> {
   console.log(`[YouTube Crawler] Searching for: ${query}`);
-  
+
   const encodedQuery = encodeURIComponent(query);
   const url = `https://www.youtube.com/results?search_query=${encodedQuery}`;
-  
+
   const document = await fetchHTML(url);
-  
+
   if (!document) {
     return {
       kind: 'youtube#searchListResponse',
@@ -280,7 +301,7 @@ export async function crawlSearchVideos(
       items: [],
     };
   }
-  
+
   const ytData = extractYtInitialData(document);
   if (!ytData) {
     return {
@@ -290,31 +311,39 @@ export async function crawlSearchVideos(
       items: [],
     };
   }
-  
+
   try {
-    const contents = ytData.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+    const contents =
+      ytData.contents?.twoColumnSearchResultsRenderer?.primaryContents
+        ?.sectionListRenderer?.contents || [];
     const items: YouTubeSearchItem[] = [];
-    
+
     // Tìm phần tử chứa kết quả tìm kiếm
     for (const section of contents) {
       const itemSectionContents = section.itemSectionRenderer?.contents || [];
-      
+
       for (const content of itemSectionContents) {
         // Bỏ qua các kết quả không phải video
         if (!content.videoRenderer) continue;
-        
+
         const videoRenderer = content.videoRenderer;
         const videoId = videoRenderer.videoId;
-        
+
         if (!videoId) continue;
-        
+
         // Lấy thông tin cơ bản
         const title = videoRenderer.title?.runs?.[0]?.text || '';
         const channelTitle = videoRenderer.ownerText?.runs?.[0]?.text || '';
-        const channelId = videoRenderer.ownerText?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseId || '';
-        const description = videoRenderer.detailedMetadataSnippets?.[0]?.snippetText?.runs?.map((run: any) => run.text).join('') || '';
-        const publishedAtText = videoRenderer.publishedTimeText?.simpleText || null;
-        
+        const channelId =
+          videoRenderer.ownerText?.runs?.[0]?.navigationEndpoint?.browseEndpoint
+            ?.browseId || '';
+        const description =
+          videoRenderer.detailedMetadataSnippets?.[0]?.snippetText?.runs
+            ?.map((run: any) => run.text)
+            .join('') || '';
+        const publishedAtText =
+          videoRenderer.publishedTimeText?.simpleText || null;
+
         // Tạo đối tượng kết quả tìm kiếm
         const searchItem: YouTubeSearchItem = {
           kind: 'youtube#searchResult',
@@ -334,16 +363,16 @@ export async function crawlSearchVideos(
             publishTime: parsePublishedTime(publishedAtText),
           },
         };
-        
+
         items.push(searchItem);
-        
+
         // Giới hạn số lượng kết quả
         if (items.length >= maxResults) break;
       }
-      
+
       if (items.length >= maxResults) break;
     }
-    
+
     return {
       kind: 'youtube#searchListResponse',
       etag: '',
@@ -369,27 +398,61 @@ export async function crawlSearchVideos(
  */
 function extractKeywords(title: string, description: string): string[] {
   // Loại bỏ các ký tự đặc biệt và chuyển thành chữ thường
-  const cleanText = (text: string) => 
-    text.toLowerCase()
+  const cleanText = (text: string) =>
+    text
+      .toLowerCase()
       .replace(/[^\p{L}\s]/gu, ' ')
       .replace(/\s+/g, ' ')
       .trim();
 
   // Loại bỏ các từ phổ biến không quan trọng
   const stopWords = new Set([
-    'review', 'phim', 'movie', 'film', 'the', 'a', 'an', 'and', 'or', 'but',
-    'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'từ', 'và', 'hoặc',
-    'trong', 'ngoài', 'trên', 'dưới', 'về', 'của', 'trailer', 'official',
-    'video', 'full', 'hd', '4k', 'phần', 'tập', 'season', 'episode'
+    'review',
+    'phim',
+    'movie',
+    'film',
+    'the',
+    'a',
+    'an',
+    'and',
+    'or',
+    'but',
+    'in',
+    'on',
+    'at',
+    'to',
+    'for',
+    'of',
+    'with',
+    'by',
+    'từ',
+    'và',
+    'hoặc',
+    'trong',
+    'ngoài',
+    'trên',
+    'dưới',
+    'về',
+    'của',
+    'trailer',
+    'official',
+    'video',
+    'full',
+    'hd',
+    '4k',
+    'phần',
+    'tập',
+    'season',
+    'episode',
   ]);
 
   // Tách từ và lọc bỏ stopwords
-  const words = [...new Set([
-    ...cleanText(title).split(' '),
-    ...cleanText(description).split(' ').slice(0, 50) // Chỉ lấy 50 từ đầu tiên từ mô tả
-  ])].filter(word => 
-    word.length > 2 && !stopWords.has(word)
-  );
+  const words = [
+    ...new Set([
+      ...cleanText(title).split(' '),
+      ...cleanText(description).split(' ').slice(0, 50), // Chỉ lấy 50 từ đầu tiên từ mô tả
+    ]),
+  ].filter((word) => word.length > 2 && !stopWords.has(word));
 
   return words;
 }
@@ -399,14 +462,15 @@ function extractKeywords(title: string, description: string): string[] {
  */
 function generateSearchQuery(keywords: string[]): string {
   // Lọc từ khóa có ý nghĩa (độ dài > 3)
-  const validKeywords = keywords.filter(keyword => keyword.length > 3);
-  
+  const validKeywords = keywords.filter((keyword) => keyword.length > 3);
+
   if (validKeywords.length === 0) {
     return 'review phim mới';
   }
 
   // Chọn ngẫu nhiên một từ khóa
-  const randomKeyword = validKeywords[Math.floor(Math.random() * validKeywords.length)];
+  const randomKeyword =
+    validKeywords[Math.floor(Math.random() * validKeywords.length)];
   return `review phim ${randomKeyword}`;
 }
 
@@ -418,52 +482,65 @@ export async function crawlRelatedVideos(
   maxResults: number = 12
 ): Promise<ListResponse<YouTubeSearchItem>> {
   console.log(`[YouTube Crawler] Getting related videos for: ${videoId}`);
-  
+
   try {
     // Đầu tiên thử lấy video liên quan từ trang video
     const url = `https://www.youtube.com/watch?v=${videoId}`;
     const document = await fetchHTML(url);
-    
+
     if (!document) {
       throw new Error('Failed to fetch video page');
     }
-    
+
     const ytData = extractYtInitialData(document);
     if (!ytData) {
       throw new Error('Failed to extract video data');
     }
 
     // Lấy thông tin video gốc
-    const videoData = ytData.contents?.twoColumnWatchNextResults?.results?.results?.contents?.[0]?.videoPrimaryInfoRenderer;
-    const videoSecondaryInfo = ytData.contents?.twoColumnWatchNextResults?.results?.results?.contents?.[1]?.videoSecondaryInfoRenderer;
-    
+    const videoData =
+      ytData.contents?.twoColumnWatchNextResults?.results?.results
+        ?.contents?.[0]?.videoPrimaryInfoRenderer;
+    const videoSecondaryInfo =
+      ytData.contents?.twoColumnWatchNextResults?.results?.results
+        ?.contents?.[1]?.videoSecondaryInfoRenderer;
+
     if (!videoData) {
       throw new Error('Failed to extract video info');
     }
 
     const title = videoData.title?.runs?.[0]?.text || '';
-    const description = videoSecondaryInfo?.description?.runs?.map((run: any) => run.text).join('') || '';
+    const description =
+      videoSecondaryInfo?.description?.runs
+        ?.map((run: any) => run.text)
+        .join('') || '';
 
     // Thử lấy video liên quan từ trang
-    const secondaryResults = ytData.contents?.twoColumnWatchNextResults?.secondaryResults?.secondaryResults?.results || [];
+    const secondaryResults =
+      ytData.contents?.twoColumnWatchNextResults?.secondaryResults
+        ?.secondaryResults?.results || [];
     let items: YouTubeSearchItem[] = [];
-    
+
     // Xử lý kết quả từ trang video
     for (const result of secondaryResults) {
       const compactVideoRenderer = result.compactVideoRenderer;
-      
+
       if (!compactVideoRenderer) continue;
-      
+
       const relatedVideoId = compactVideoRenderer.videoId;
-      
+
       // Bỏ qua video hiện tại
       if (relatedVideoId === videoId) continue;
-      
+
       const videoTitle = compactVideoRenderer.title?.simpleText || '';
-      const channelTitle = compactVideoRenderer.longBylineText?.runs?.[0]?.text || '';
-      const channelId = compactVideoRenderer.longBylineText?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseId || '';
-      const publishedAtText = compactVideoRenderer.publishedTimeText?.simpleText || null;
-      
+      const channelTitle =
+        compactVideoRenderer.longBylineText?.runs?.[0]?.text || '';
+      const channelId =
+        compactVideoRenderer.longBylineText?.runs?.[0]?.navigationEndpoint
+          ?.browseEndpoint?.browseId || '';
+      const publishedAtText =
+        compactVideoRenderer.publishedTimeText?.simpleText || null;
+
       items.push({
         kind: 'youtube#searchResult',
         etag: '',
@@ -489,19 +566,19 @@ export async function crawlRelatedVideos(
       // Trích xuất từ khóa từ tiêu đề và mô tả
       const keywords = extractKeywords(title, description);
       const searchQuery = generateSearchQuery(keywords);
-      
+
       // Tìm kiếm video bổ sung bằng từ khóa
       const searchResult = await crawlSearchVideos(searchQuery, maxResults);
-      
+
       // Gộp kết quả tìm kiếm và loại bỏ trùng lặp
-      const seenIds = new Set(items.map(item => item.id.videoId));
+      const seenIds = new Set(items.map((item) => item.id.videoId));
       seenIds.add(videoId); // Thêm ID video gốc để loại bỏ
-      
+
       for (const item of searchResult.items) {
         if (!seenIds.has(item.id.videoId)) {
           items.push(item);
           seenIds.add(item.id.videoId);
-          
+
           if (items.length >= maxResults) break;
         }
       }
@@ -509,7 +586,7 @@ export async function crawlRelatedVideos(
 
     // Giới hạn số lượng kết quả
     items = items.slice(0, maxResults);
-    
+
     return {
       kind: 'youtube#searchListResponse',
       etag: '',
@@ -521,7 +598,7 @@ export async function crawlRelatedVideos(
     };
   } catch (error) {
     console.error(`Error getting related videos for ${videoId}:`, error);
-    
+
     // Nếu có lỗi, trả về danh sách trống
     return {
       kind: 'youtube#searchListResponse',
@@ -539,10 +616,10 @@ export async function crawlMostPopular(
   maxResults: number = 20
 ): Promise<ListResponse<YouTubeVideo>> {
   console.log('[YouTube Crawler] Getting most popular videos');
-  
+
   const url = 'https://www.youtube.com/feed/trending';
   const document = await fetchHTML(url);
-  
+
   if (!document) {
     return {
       kind: 'youtube#videoListResponse',
@@ -551,7 +628,7 @@ export async function crawlMostPopular(
       items: [],
     };
   }
-  
+
   const ytData = extractYtInitialData(document);
   if (!ytData) {
     return {
@@ -561,11 +638,13 @@ export async function crawlMostPopular(
       items: [],
     };
   }
-  
+
   try {
     const tabs = ytData.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
-    const trendingTab = tabs.find((tab: any) => tab.tabRenderer?.title === 'Thịnh hành') || tabs[0];
-    
+    const trendingTab =
+      tabs.find((tab: any) => tab.tabRenderer?.title === 'Thịnh hành') ||
+      tabs[0];
+
     if (!trendingTab) {
       return {
         kind: 'youtube#videoListResponse',
@@ -574,36 +653,48 @@ export async function crawlMostPopular(
         items: [],
       };
     }
-    
-    const contents = trendingTab.tabRenderer?.content?.sectionListRenderer?.contents || [];
+
+    const contents =
+      trendingTab.tabRenderer?.content?.sectionListRenderer?.contents || [];
     const videos: YouTubeVideo[] = [];
-    
+
     for (const section of contents) {
       const itemSectionContents = section.itemSectionRenderer?.contents || [];
-      
+
       for (const content of itemSectionContents) {
-        const videoRenderer = content.videoRenderer || content.shelfRenderer?.content?.verticalListRenderer?.items?.[0]?.videoRenderer;
-        
+        const videoRenderer =
+          content.videoRenderer ||
+          content.shelfRenderer?.content?.verticalListRenderer?.items?.[0]
+            ?.videoRenderer;
+
         if (!videoRenderer) continue;
-        
+
         const videoId = videoRenderer.videoId;
-        
+
         if (!videoId) continue;
-        
+
         const title = videoRenderer.title?.runs?.[0]?.text || '';
         const channelTitle = videoRenderer.ownerText?.runs?.[0]?.text || '';
-        const channelId = videoRenderer.ownerText?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseId || '';
-        const description = videoRenderer.detailedMetadataSnippets?.[0]?.snippetText?.runs?.map((run: any) => run.text).join('') || '';
-        const publishedAtText = videoRenderer.publishedTimeText?.simpleText || null;
-        
+        const channelId =
+          videoRenderer.ownerText?.runs?.[0]?.navigationEndpoint?.browseEndpoint
+            ?.browseId || '';
+        const description =
+          videoRenderer.detailedMetadataSnippets?.[0]?.snippetText?.runs
+            ?.map((run: any) => run.text)
+            .join('') || '';
+        const publishedAtText =
+          videoRenderer.publishedTimeText?.simpleText || null;
+
         // Lấy lượt xem
-        const viewCountText = videoRenderer.viewCountText?.simpleText || 
-                             videoRenderer.shortViewCountText?.simpleText || '0 lượt xem';
+        const viewCountText =
+          videoRenderer.viewCountText?.simpleText ||
+          videoRenderer.shortViewCountText?.simpleText ||
+          '0 lượt xem';
         const viewCount = viewCountText.replace(/[^\d]/g, '');
-        
+
         // Lấy thời lượng
         const durationText = videoRenderer.lengthText?.simpleText || null;
-        
+
         const video: YouTubeVideo = {
           kind: 'youtube#video',
           etag: '',
@@ -636,15 +727,15 @@ export async function crawlMostPopular(
             favoriteCount: '0',
           },
         };
-        
+
         videos.push(video);
-        
+
         if (videos.length >= maxResults) break;
       }
-      
+
       if (videos.length >= maxResults) break;
     }
-    
+
     return {
       kind: 'youtube#videoListResponse',
       etag: '',
@@ -663,4 +754,4 @@ export async function crawlMostPopular(
       items: [],
     };
   }
-} 
+}

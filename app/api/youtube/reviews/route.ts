@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchVideos, YouTubeApiError } from '@/lib/youtube';
 import { rateLimiter } from '@/lib/rate-limiter';
-import { logQuotaUsage } from '@/lib/quota';
 import {
   REVIEW_KEYWORDS,
   getRandomKeyword,
@@ -58,57 +57,10 @@ export async function GET(request: NextRequest) {
       default:
         // Use single random keyword from mixed categories to save quota
         const keywords = getMixedKeywords();
-<<<<<<< HEAD:app/api/youtube/reviews/route.ts
-        const resultsPerKeyword = Math.ceil(maxResults / keywords.length);
-
-        const searchPromises = keywords.map((keyword) =>
-          searchVideos({
-            q: keyword,
-            maxResults: resultsPerKeyword,
-            order: 'relevance', // Use relevance instead of date
-            regionCode: 'VN',
-          }).catch(error => {
-            console.error(`Error searching for "${keyword}":`, error);
-            // Trả về một kết quả trống nếu có lỗi
-            return {
-              kind: 'youtube#searchListResponse',
-              etag: '',
-              pageInfo: { totalResults: 0, resultsPerPage: 0 },
-              items: [],
-            };
-          })
-        );
-
-        const results = await Promise.all(searchPromises);
-
-        // Combine and shuffle results
-        const allVideos = results.flatMap((result) => result.items || []);
-        const shuffled = allVideos.sort(() => Math.random() - 0.5);
-
-        return NextResponse.json(
-          {
-            items: shuffled.slice(0, maxResults),
-            kind: 'youtube#searchListResponse',
-            pageInfo: {
-              totalResults: shuffled.length,
-              resultsPerPage: maxResults,
-            },
-            searchQuery: keywords.join(', '),
-          },
-          {
-            headers: {
-              'Cache-Control':
-                'public, s-maxage=300, stale-while-revalidate=600',
-              'X-RateLimit-Remaining': remaining.toString(),
-            },
-          }
-        );
-=======
         const randomKeyword =
           keywords[Math.floor(Math.random() * keywords.length)];
         searchQuery = randomKeyword;
         break;
->>>>>>> 25e861aa087b691560e1dc63a44032a8fe6500d3:src/app/api/youtube/reviews/route.ts
     }
 
     // Single keyword search
@@ -118,9 +70,6 @@ export async function GET(request: NextRequest) {
       order: 'relevance', // Use relevance instead of date
       regionCode: 'VN',
     });
-
-    // Log quota usage
-    logQuotaUsage(`reviews-${type}`, 100);
 
     return NextResponse.json(
       {

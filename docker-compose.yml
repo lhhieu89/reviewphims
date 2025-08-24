@@ -1,13 +1,13 @@
 # Docker Compose for Review Phim Application
 services:
   review-phim:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     container_name: review-phim-app
     restart: unless-stopped
     ports:
-      - "3001:3001"  # External:Internal port mapping
+      - '3001:3001' # External:Internal port mapping
     environment:
       - NODE_ENV=production
       - PORT=3001
@@ -19,15 +19,15 @@ services:
     networks:
       - review-phim-network
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.review-phim.rule=Host(`your-domain.com`)"
-      - "traefik.http.routers.review-phim.tls=true"
-      - "traefik.http.routers.review-phim.tls.certresolver=letsencrypt"
-      - "traefik.http.services.review-phim.loadbalancer.server.port=3001"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.review-phim.rule=Host(`your-domain.com`)'
+      - 'traefik.http.routers.review-phim.tls=true'
+      - 'traefik.http.routers.review-phim.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.review-phim.loadbalancer.server.port=3001'
     volumes:
       - /etc/localtime:/etc/localtime:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3001/api/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -37,7 +37,6 @@ networks:
   review-phim-network:
     driver: bridge
     name: review-phim-net
-
 # Optional: Add Redis for caching (uncomment if needed)
 # redis:
 #   image: redis:7-alpine
