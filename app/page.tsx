@@ -129,12 +129,12 @@ async function getReviewVideos(
 }
 
 export default async function HomePage() {
-  // Fetch different types of review content
+  // Only 3 requests for homepage as requested
   const [latestReviews, costumeDramaReviews, trailerVideos] = await Promise.all(
     [
-      getReviewVideos('general', 16),
-      getReviewVideos('costume_drama', 16),
-      getReviewVideos('trailers', 16),
+      getReviewVideos('general', 12), // Reduced size
+      getReviewVideos('costume_drama', 12), // Reduced size
+      getReviewVideos('trailers', 12), // Reduced size
     ]
   );
 

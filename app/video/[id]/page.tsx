@@ -1,30 +1,9 @@
 import { Metadata } from 'next';
-import Image from 'next/image';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Suspense } from 'react';
-import { VideoGrid } from '@/components/VideoGrid';
-import { VideoDescription } from '@/components/VideoDescription';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
-import RelatedVideos, {
-  RelatedVideosSkeleton,
-} from '@/components/RelatedVideos';
 import { env } from '@/lib/env';
-import {
-  formatViewCount,
-  formatRelativeTime,
-  formatNumber,
-  getBestThumbnail,
-} from '@/lib/format';
-import type {
-  YouTubeVideo,
-  YouTubeChannel,
-  ListResponse,
-  YouTubeSearchItem,
-  VideoCardData,
-} from '@/types/youtube';
 
-export const revalidate = 300; // 5 minutes
+export const revalidate = 1800; // 30 minutes for better caching
 
 interface VideoPageProps {
   params: {
@@ -32,41 +11,69 @@ interface VideoPageProps {
   };
 }
 
-async function getVideoData(id: string): Promise<{
-  video: YouTubeVideo;
-  channel: YouTubeChannel | null;
-}> {
-  try {
-    // Fetch video details
-    const videoResponse = await fetch(
-      `${env.SITE_URL}/api/youtube/video?id=${id}`,
-      { next: { revalidate: 300 } }
-    );
+interface VideoOembedData {
+  id: string;
+  title?: string;
+  author?: string;
+  image?: string;
+  embeddable?: boolean;
+  public?: boolean;
+}
 
-    if (!videoResponse.ok) {
-      throw new Error('Video not found');
+async function getVideoOembedData(id: string): Promise<VideoOembedData | null> {
+  try {
+    // First try YouTube oembed API directly
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`;
+    const response = await fetch(oembedUrl, {
+      next: { revalidate: 1800 }, // Cache for 30 minutes
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        id,
+        title: data.title,
+        author: data.author_name,
+        image: data.thumbnail_url,
+      };
     }
 
-    const video: YouTubeVideo = await videoResponse.json();
-
-    // Fetch channel details - TEMPORARILY DISABLED TO REDUCE API REQUESTS
-    const channel: YouTubeChannel | null = null;
-    // try {
-    //   const channelResponse = await fetch(
-    //     `${env.SITE_URL}/api/youtube/channel?id=${video.snippet.channelId}`,
-    //     { next: { revalidate: 300 } }
-    //   );
-    //   if (channelResponse.ok) {
-    //     channel = await channelResponse.json();
-    //   }
-    // } catch (error) {
-    //   console.error('Error fetching channel:', error);
-    // }
-
-    return { video, channel };
+    // If oembed fails, try embed page fallback
+    return await getVideoFromEmbed(id);
   } catch (error) {
-    console.error('Error fetching video data:', error);
-    throw error;
+    console.error('Error fetching video oembed data:', error);
+    return await getVideoFromEmbed(id);
+  }
+}
+
+async function getVideoFromEmbed(id: string): Promise<VideoOembedData | null> {
+  try {
+    const embedUrl = `https://youtube.com/embed/${id}`;
+    const response = await fetch(embedUrl, {
+      next: { revalidate: 1800 },
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+
+    if (response.ok) {
+      return {
+        id,
+        title: `YouTube Video ${id}`,
+        author: 'YouTube',
+        image: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error fetching video from embed:', error);
+    return null;
   }
 }
 
@@ -74,22 +81,27 @@ export async function generateMetadata({
   params,
 }: VideoPageProps): Promise<Metadata> {
   try {
-    const { video } = await getVideoData(params.id);
+    const videoData = await getVideoOembedData(params.id);
 
-    const thumbnailUrl = getBestThumbnail(video.snippet.thumbnails);
+    if (!videoData || !videoData.title) {
+      return {
+        title: 'Video không tìm thấy',
+        description: 'Video này không tồn tại hoặc đã bị xóa.',
+      };
+    }
 
     return {
-      title: video.snippet.title,
-      description: video.snippet.description.slice(0, 160) + '...',
+      title: videoData.title,
+      description: `Video từ ${videoData.author || 'YouTube'}: ${videoData.title}`,
       alternates: {
         canonical: `/video/${params.id}`,
       },
       openGraph: {
-        title: video.snippet.title,
-        description: video.snippet.description.slice(0, 160) + '...',
+        title: videoData.title,
+        description: `Video từ ${videoData.author || 'YouTube'}: ${videoData.title}`,
         type: 'video.other',
         url: `${env.SITE_URL}/video/${params.id}`,
-        images: thumbnailUrl ? [{ url: thumbnailUrl }] : [],
+        images: videoData.image ? [{ url: videoData.image }] : [],
         videos: [
           {
             url: `https://www.youtube.com/watch?v=${params.id}`,
@@ -99,9 +111,9 @@ export async function generateMetadata({
       },
       twitter: {
         card: 'player',
-        title: video.snippet.title,
-        description: video.snippet.description.slice(0, 160) + '...',
-        images: thumbnailUrl ? [thumbnailUrl] : [],
+        title: videoData.title,
+        description: `Video từ ${videoData.author || 'YouTube'}: ${videoData.title}`,
+        images: videoData.image ? [videoData.image] : [],
         players: [
           {
             playerUrl: `https://www.youtube-nocookie.com/embed/${params.id}`,
@@ -122,45 +134,76 @@ export async function generateMetadata({
 
 export default async function VideoPage({ params }: VideoPageProps) {
   try {
-    const { video, channel } = await getVideoData(params.id);
+    const videoData = await getVideoOembedData(params.id);
 
-    const channelThumbnail = channel
-      ? getBestThumbnail(channel.snippet.thumbnails)
-      : null;
+    if (!videoData) {
+      notFound();
+    }
 
-    // Structured data for SEO
+    // Handle embeddable/public restrictions
+    if (videoData.embeddable === false) {
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🚫</div>
+            <h1 className="text-2xl font-bold text-foreground mb-4">
+              Video không thể nhúng
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              Video này không thể phát trên trang web bên ngoài. Vui lòng xem
+              trên YouTube.
+            </p>
+            <a
+              href={`https://www.youtube.com/watch?v=${params.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Xem trên YouTube
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    if (videoData.public === false) {
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🔒</div>
+            <h1 className="text-2xl font-bold text-foreground mb-4">
+              Video riêng tư
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              Video này đã được đặt ở chế độ riêng tư hoặc đã bị xóa.
+            </p>
+            <a
+              href={`https://www.youtube.com/watch?v=${params.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Thử xem trên YouTube
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    // Structured data for SEO (simplified)
     const structuredData = {
       '@context': 'https://schema.org',
       '@type': 'VideoObject',
-      name: video.snippet.title,
-      description: video.snippet.description,
-      thumbnailUrl: getBestThumbnail(video.snippet.thumbnails),
-      uploadDate: video.snippet.publishedAt,
-      duration: video.contentDetails?.duration,
+      name: videoData.title || 'YouTube Video',
+      thumbnailUrl:
+        videoData.image || `https://i.ytimg.com/vi/${params.id}/hqdefault.jpg`,
       embedUrl: `https://www.youtube-nocookie.com/embed/${params.id}`,
-      interactionStatistic: video.statistics
-        ? [
-            {
-              '@type': 'InteractionCounter',
-              interactionType: { '@type': 'WatchAction' },
-              userInteractionCount: parseInt(video.statistics.viewCount || '0'),
-            },
-            ...(video.statistics.likeCount
-              ? [
-                  {
-                    '@type': 'InteractionCounter',
-                    interactionType: { '@type': 'LikeAction' },
-                    userInteractionCount: parseInt(video.statistics.likeCount),
-                  },
-                ]
-              : []),
-          ]
-        : [],
-      author: {
-        '@type': 'Person',
-        name: video.snippet.channelTitle,
-        url: `https://www.youtube.com/channel/${video.snippet.channelId}`,
-      },
+      author: videoData.author
+        ? {
+            '@type': 'Person',
+            name: videoData.author,
+          }
+        : undefined,
     };
 
     return (
@@ -171,88 +214,33 @@ export default async function VideoPage({ params }: VideoPageProps) {
         />
 
         <div className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main video content */}
-            <div className="lg:col-span-2">
-              {/* Video player */}
-              <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
-                <YouTubePlayer
-                  videoId={params.id}
-                  title={video.snippet.title}
-                  className="rounded-lg"
-                />
-              </div>
-
-              {/* Video info */}
-              <div className="space-y-4">
-                <h1 className="text-2xl font-bold text-foreground">
-                  {video.snippet.title}
-                </h1>
-
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-4">
-                    {/* TEMPORARILY HIDDEN TO REDUCE API REQUESTS */}
-                    {/* {channelThumbnail && (
-                      <Image
-                        src={channelThumbnail}
-                        alt={video.snippet.channelTitle}
-                        width={40}
-                        height={40}
-                        className="rounded-full"
-                      />
-                    )} */}
-                    <div>
-                      <Link
-                        href={`https://www.youtube.com/channel/${video.snippet.channelId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-foreground hover:text-primary transition-colors"
-                      >
-                        {video.snippet.channelTitle}
-                      </Link>
-                      {/* TEMPORARILY HIDDEN TO REDUCE API REQUESTS */}
-                      {/* {channel?.statistics?.subscriberCount && (
-                        <p className="text-sm text-muted-foreground">
-                          {formatViewCount(channel.statistics.subscriberCount)}{' '}
-                          người đăng ký
-                        </p>
-                      )} */}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {video.statistics?.viewCount && (
-                      <span>
-                        {formatViewCount(video.statistics.viewCount)} lượt xem
-                      </span>
-                    )}
-                    {video.statistics?.likeCount && (
-                      <span className="hidden">
-                        {formatViewCount(video.statistics.likeCount)} lượt thích
-                      </span>
-                    )}
-                    <span className="hidden">
-                      {formatRelativeTime(video.snippet.publishedAt)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="bg-card p-4 rounded-lg">
-                  <VideoDescription description={video.snippet.description} />
-                </div>
-              </div>
+          <div className="max-w-4xl mx-auto">
+            {/* Video player */}
+            <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
+              <YouTubePlayer
+                videoId={params.id}
+                title={videoData.title || 'YouTube Video'}
+                className="rounded-lg"
+              />
             </div>
 
-            {/* Related videos sidebar */}
-            <div className="lg:col-span-1">
-              <h2 className="text-lg font-semibold text-foreground mb-4">
-                Video liên quan
-              </h2>
+            {/* Video info */}
+            <div className="space-y-4">
+              {videoData.title && (
+                <h1 className="text-2xl font-bold text-foreground">
+                  {videoData.title}
+                </h1>
+              )}
 
-              <Suspense fallback={<RelatedVideosSkeleton />}>
-                <RelatedVideos videoId={params.id} />
-              </Suspense>
+              {videoData.author && (
+                <div className="flex items-center gap-4 hidden">
+                  <div>
+                    <p className="font-semibold text-foreground">
+                      {videoData.author}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

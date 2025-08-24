@@ -221,6 +221,150 @@ function createThumbnails(videoId: string): YouTubeThumbnails {
 }
 
 /**
+ * Lấy thông tin video từ oembed API với fallback về embed
+ */
+export async function crawlVideoByOembed(id: string): Promise<{
+  id: string;
+  title?: string;
+  author?: string;
+  image?: string;
+  embeddable?: boolean;
+  public?: boolean;
+} | null> {
+  // Kiểm tra cache
+  const cacheKey = `oembed:${id}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.timestamp > Date.now() - CACHE_TTL) {
+    return cached.data;
+  }
+
+  console.log(`[YouTube Crawler] Oembed crawling video: ${id}`);
+
+  try {
+    // Thử oembed API trước
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`;
+    const response = await fetch(oembedUrl, {
+      headers: {
+        'User-Agent': getRandomUserAgent(),
+      },
+      // Timeout 2 seconds tương tự Ruby code
+      signal: AbortSignal.timeout(2000),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.title) {
+        const result = {
+          id,
+          title: data.title,
+          image: data.thumbnail_url,
+          author: data.author_name,
+        };
+
+        // Lưu vào cache
+        cache.set(cacheKey, {
+          data: result,
+          timestamp: Date.now(),
+        });
+
+        return result;
+      }
+    } else if (response.status === 401) {
+      const result = {
+        id,
+        embeddable: false,
+      };
+      cache.set(cacheKey, { data: result, timestamp: Date.now() });
+      return result;
+    } else if (response.status === 403) {
+      const result = {
+        id,
+        public: false,
+      };
+      cache.set(cacheKey, { data: result, timestamp: Date.now() });
+      return result;
+    }
+  } catch (error) {
+    console.log('Oembed failed, trying embed method');
+  }
+
+  // Fallback về phương pháp embed
+  try {
+    const embedUrl = `https://youtube.com/embed/${id}`;
+    const response = await fetch(embedUrl, {
+      headers: {
+        'User-Agent': getRandomUserAgent(),
+      },
+      signal: AbortSignal.timeout(2000),
+    });
+
+    if (response.ok) {
+      const html = await response.text();
+      const dom = new JSDOM(html);
+      const document = dom.window.document;
+
+      // Tìm script chứa ytcfg.set
+      const scripts = document.querySelectorAll('script');
+      for (const script of scripts) {
+        const content = script.textContent || '';
+        if (content.includes('ytcfg.set')) {
+          try {
+            // Trích xuất data từ ytcfg.set pattern
+            const match = content.match(/ytcfg\.set\((.*)\);window/);
+            if (match && match[1]) {
+              const json = JSON.parse(match[1]);
+              if (json.PLAYER_VARS?.embedded_player_response) {
+                const playerResponse = JSON.parse(
+                  json.PLAYER_VARS.embedded_player_response
+                );
+                const videoDetails =
+                  playerResponse?.embedPreview?.thumbnailPreviewRenderer
+                    ?.videoDetails?.embeddedPlayerOverlayVideoDetailsRenderer;
+
+                if (videoDetails) {
+                  const title =
+                    videoDetails?.collapsedRenderer
+                      ?.embeddedPlayerOverlayVideoDetailsCollapsedRenderer
+                      ?.title?.runs?.[0]?.text;
+                  const author =
+                    videoDetails?.expandedRenderer
+                      ?.embeddedPlayerOverlayVideoDetailsExpandedRenderer?.title
+                      ?.runs?.[0]?.text;
+
+                  const result = {
+                    id,
+                    title: title || undefined,
+                    image: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+                    author: author || undefined,
+                  };
+
+                  // Lưu vào cache
+                  cache.set(cacheKey, {
+                    data: result,
+                    timestamp: Date.now(),
+                  });
+
+                  return result;
+                }
+              }
+            }
+          } catch (parseError) {
+            console.error('Error parsing embed data:', parseError);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error in embed fallback:', error);
+  }
+
+  // Trả về thông tin cơ bản nhất
+  const result = { id };
+  cache.set(cacheKey, { data: result, timestamp: Date.now() });
+  return result;
+}
+
+/**
  * Lấy thông tin chi tiết của một video với cache
  */
 export async function crawlVideoById(id: string): Promise<YouTubeVideo | null> {
@@ -545,141 +689,6 @@ function generateSearchQuery(keywords: string[]): string {
   const randomKeyword =
     validKeywords[Math.floor(Math.random() * validKeywords.length)];
   return `review phim ${randomKeyword}`;
-}
-
-/**
- * Lấy danh sách video liên quan
- */
-export async function crawlRelatedVideos(
-  videoId: string,
-  maxResults: number = 12
-): Promise<ListResponse<YouTubeSearchItem>> {
-  console.log(`[YouTube Crawler] Getting related videos for: ${videoId}`);
-
-  try {
-    // Đầu tiên thử lấy video liên quan từ trang video
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
-    const document = await fetchHTML(url);
-
-    if (!document) {
-      throw new Error('Failed to fetch video page');
-    }
-
-    const ytData = extractYtInitialData(document);
-    if (!ytData) {
-      throw new Error('Failed to extract video data');
-    }
-
-    // Lấy thông tin video gốc
-    const videoData =
-      ytData.contents?.twoColumnWatchNextResults?.results?.results
-        ?.contents?.[0]?.videoPrimaryInfoRenderer;
-    const videoSecondaryInfo =
-      ytData.contents?.twoColumnWatchNextResults?.results?.results
-        ?.contents?.[1]?.videoSecondaryInfoRenderer;
-
-    if (!videoData) {
-      throw new Error('Failed to extract video info');
-    }
-
-    const title = videoData.title?.runs?.[0]?.text || '';
-    const description =
-      videoSecondaryInfo?.description?.runs
-        ?.map((run: any) => run.text)
-        .join('') || '';
-
-    // Thử lấy video liên quan từ trang
-    const secondaryResults =
-      ytData.contents?.twoColumnWatchNextResults?.secondaryResults
-        ?.secondaryResults?.results || [];
-    let items: YouTubeSearchItem[] = [];
-
-    // Xử lý kết quả từ trang video
-    for (const result of secondaryResults) {
-      const compactVideoRenderer = result.compactVideoRenderer;
-
-      if (!compactVideoRenderer) continue;
-
-      const relatedVideoId = compactVideoRenderer.videoId;
-
-      // Bỏ qua video hiện tại
-      if (relatedVideoId === videoId) continue;
-
-      const videoTitle = compactVideoRenderer.title?.simpleText || '';
-      const channelTitle =
-        compactVideoRenderer.longBylineText?.runs?.[0]?.text || '';
-      const channelId =
-        compactVideoRenderer.longBylineText?.runs?.[0]?.navigationEndpoint
-          ?.browseEndpoint?.browseId || '';
-      const publishedAtText =
-        compactVideoRenderer.publishedTimeText?.simpleText || null;
-
-      items.push({
-        kind: 'youtube#searchResult',
-        etag: '',
-        id: {
-          kind: 'youtube#video',
-          videoId: relatedVideoId,
-        },
-        snippet: {
-          publishedAt: parsePublishedTime(publishedAtText),
-          channelId,
-          title: videoTitle,
-          description: '',
-          thumbnails: createThumbnails(relatedVideoId),
-          channelTitle,
-          liveBroadcastContent: 'none',
-          publishTime: parsePublishedTime(publishedAtText),
-        },
-      });
-    }
-
-    // Nếu không đủ video liên quan, thử tìm thêm bằng từ khóa
-    if (items.length < maxResults) {
-      // Trích xuất từ khóa từ tiêu đề và mô tả
-      const keywords = extractKeywords(title, description);
-      const searchQuery = generateSearchQuery(keywords);
-
-      // Tìm kiếm video bổ sung bằng từ khóa
-      const searchResult = await crawlSearchVideos(searchQuery, maxResults);
-
-      // Gộp kết quả tìm kiếm và loại bỏ trùng lặp
-      const seenIds = new Set(items.map((item) => item.id.videoId));
-      seenIds.add(videoId); // Thêm ID video gốc để loại bỏ
-
-      for (const item of searchResult.items) {
-        if (!seenIds.has(item.id.videoId)) {
-          items.push(item);
-          seenIds.add(item.id.videoId);
-
-          if (items.length >= maxResults) break;
-        }
-      }
-    }
-
-    // Giới hạn số lượng kết quả
-    items = items.slice(0, maxResults);
-
-    return {
-      kind: 'youtube#searchListResponse',
-      etag: '',
-      pageInfo: {
-        totalResults: items.length,
-        resultsPerPage: items.length,
-      },
-      items,
-    };
-  } catch (error) {
-    console.error(`Error getting related videos for ${videoId}:`, error);
-
-    // Nếu có lỗi, trả về danh sách trống
-    return {
-      kind: 'youtube#searchListResponse',
-      etag: '',
-      pageInfo: { totalResults: 0, resultsPerPage: 0 },
-      items: [],
-    };
-  }
 }
 
 /**

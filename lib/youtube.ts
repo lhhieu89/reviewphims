@@ -9,7 +9,6 @@ import type {
 import {
   crawlVideoById,
   crawlSearchVideos,
-  crawlRelatedVideos,
   crawlMostPopular,
 } from './youtube-crawler';
 
@@ -232,56 +231,6 @@ export async function getChannelById({
   return response.items[0] || null;
 }
 
-export interface ListRelatedVideosParams {
-  id: string;
-  maxResults?: number;
-}
-
-export async function listRelatedVideos({
-  id,
-  maxResults = 12,
-}: ListRelatedVideosParams): Promise<ListResponse<YouTubeSearchItem>> {
-  try {
-    // Note: YouTube deprecated relatedToVideoId, so we'll search for videos from the same channel
-    // First get the video to find its channel
-    const video = await getVideoById({ id });
-
-    if (!video) {
-      return {
-        kind: 'youtube#searchListResponse',
-        etag: '',
-        pageInfo: { totalResults: 0, resultsPerPage: 0 },
-        items: [],
-      };
-    }
-
-    const params: Record<string, string> = {
-      part: 'snippet',
-      type: 'video',
-      channelId: video.snippet.channelId,
-      maxResults: (maxResults + 1).toString(), // Get one extra to filter out current video
-      order: 'relevance',
-    };
-
-    const response = await fetchYouTubeApi<ListResponse<YouTubeSearchItem>>(
-      'search',
-      params
-    );
-
-    // Filter out the current video and limit results
-    response.items = response.items
-      .filter((item) => item.id.videoId !== id)
-      .slice(0, maxResults);
-
-    return response;
-  } catch (error) {
-    // Nếu hết quota API, sử dụng phương pháp crawl
-    if (isQuotaExceededError(error)) {
-      console.log('YouTube API quota exceeded, falling back to web crawler');
-      return await crawlRelatedVideos(id, maxResults);
-    }
-    throw error;
-  }
-}
+// Related videos functionality removed to save requests as requested
 
 export { YouTubeApiError };

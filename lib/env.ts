@@ -8,7 +8,7 @@ function validateEnv(): EnvConfig {
   const requiredEnvVars = {
     YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
     YOUTUBE_REGION_CODE: process.env.YOUTUBE_REGION_CODE || 'VN',
-    SITE_URL: process.env.SITE_URL || 'http://localhost:3001',
+    SITE_URL: process.env.SITE_URL || 'http://localhost:3000',
   };
 
   const missingVars: string[] = [];

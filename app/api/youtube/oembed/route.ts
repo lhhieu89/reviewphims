@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { listRelatedVideos } from '@/lib/youtube';
+import { crawlVideoByOembed } from '@/lib/youtube-crawler';
 import { rateLimiter } from '@/lib/rate-limiter';
 
 export async function GET(request: NextRequest) {
@@ -30,27 +30,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const maxResults = searchParams.get('maxResults')
-      ? parseInt(searchParams.get('maxResults')!, 10)
-      : undefined;
+    const data = await crawlVideoByOembed(id);
 
-    const data = await listRelatedVideos({
-      id,
-      maxResults,
-    });
+    if (!data) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 });
+    }
 
     return NextResponse.json(data, {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
         'X-RateLimit-Remaining': remaining.toString(),
       },
     });
   } catch (error) {
-    console.error('YouTube Related Videos API Error:', error);
+    console.error('YouTube Oembed API Error:', error);
 
-    // Vẫn trả về lỗi nếu không phải lỗi quota (lỗi quota đã được xử lý trong lib/youtube.ts)
     return NextResponse.json(
-      { error: 'Failed to fetch related videos' },
+      { error: 'Failed to fetch video details from oembed' },
       { status: 500 }
     );
   }
