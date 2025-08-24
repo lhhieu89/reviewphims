@@ -7,15 +7,31 @@ import type {
 } from '@/types/youtube';
 
 // Các user agent để giả lập trình duyệt
+// Danh sách 10 user agent cho mỗi loại (pc & mobile)
 const USER_AGENTS = {
   pc: [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_2_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.70 Safari/537.36',
+    'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:118.0) Gecko/20100101 Firefox/118.0',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/18.19041',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 12_6_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6 Safari/605.1.15',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
   ],
   mobile: [
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.234 Mobile Safari/537.36',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 16_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.6045.134 Mobile Safari/537.36',
+    'Mozilla/5.0 (iPad; CPU OS 15_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.7 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Linux; Android 11; SM-A515F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.70 Mobile Safari/537.36',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 15_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.5 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Linux; Android 10; Mi 9T Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Mobile Safari/537.36',
+    'Mozilla/5.0 (Linux; Android 13; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.85 Mobile Safari/537.36',
     'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
-    'Mozilla/5.0 (Android 11; Mobile; rv:68.0) Gecko/68.0 Firefox/88.0',
   ],
 };
 
@@ -27,10 +43,21 @@ function getRandomUserAgent(type: 'pc' | 'mobile' = 'pc'): string {
   return agents[Math.floor(Math.random() * agents.length)];
 }
 
+// Cache cho các request
+const cache = new Map<string, any>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 phút
+
 /**
- * Lấy dữ liệu HTML từ một URL
+ * Lấy dữ liệu HTML từ một URL với cache
  */
 async function fetchHTML(url: string): Promise<Document | null> {
+  // Kiểm tra cache
+  const cacheKey = `html:${url}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.timestamp > Date.now() - CACHE_TTL) {
+    return cached.data;
+  }
+
   try {
     const response = await fetch(url, {
       headers: {
@@ -49,7 +76,15 @@ async function fetchHTML(url: string): Promise<Document | null> {
 
     const html = await response.text();
     const dom = new JSDOM(html);
-    return dom.window.document;
+    const document = dom.window.document;
+
+    // Lưu vào cache
+    cache.set(cacheKey, {
+      data: document,
+      timestamp: Date.now(),
+    });
+
+    return document;
   } catch (error) {
     console.error(`Error fetching ${url}:`, error);
     return null;
@@ -66,11 +101,21 @@ function extractYtInitialData(document: Document): any {
     for (let i = 0; i < scripts.length; i++) {
       const scriptContent = scripts[i].textContent || '';
       if (scriptContent.includes('ytInitialData')) {
-        // Sử dụng cách tiếp cận khác để hỗ trợ tương thích với các phiên bản ES cũ hơn
-        const regex = /ytInitialData\s*=\s*({.*?});/;
+        // Sử dụng regex mạnh hơn để bắt JSON object
+        const regex = /var\s+ytInitialData\s*=\s*({.+?});/s;
         const match = scriptContent.match(regex);
         if (match && match[1]) {
-          return JSON.parse(match[1]);
+          try {
+            return JSON.parse(match[1]);
+          } catch (parseError) {
+            console.error('Error parsing ytInitialData JSON:', parseError);
+            // Thử cách khác nếu JSON.parse thất bại
+            const altRegex = /ytInitialData\s*=\s*({.+?});/s;
+            const altMatch = scriptContent.match(altRegex);
+            if (altMatch && altMatch[1]) {
+              return JSON.parse(altMatch[1]);
+            }
+          }
         }
       }
     }
@@ -176,9 +221,16 @@ function createThumbnails(videoId: string): YouTubeThumbnails {
 }
 
 /**
- * Lấy thông tin chi tiết của một video
+ * Lấy thông tin chi tiết của một video với cache
  */
 export async function crawlVideoById(id: string): Promise<YouTubeVideo | null> {
+  // Kiểm tra cache
+  const cacheKey = `video:${id}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.timestamp > Date.now() - CACHE_TTL) {
+    return cached.data;
+  }
+
   console.log(`[YouTube Crawler] Crawling video: ${id}`);
 
   const url = `https://www.youtube.com/watch?v=${id}`;
@@ -272,6 +324,12 @@ export async function crawlVideoById(id: string): Promise<YouTubeVideo | null> {
       },
     };
 
+    // Lưu vào cache
+    cache.set(cacheKey, {
+      data: video,
+      timestamp: Date.now(),
+    });
+
     return video;
   } catch (error) {
     console.error(`Error parsing video data for ${id}:`, error);
@@ -280,12 +338,19 @@ export async function crawlVideoById(id: string): Promise<YouTubeVideo | null> {
 }
 
 /**
- * Tìm kiếm video trên YouTube
+ * Tìm kiếm video trên YouTube với cache
  */
 export async function crawlSearchVideos(
   query: string,
   maxResults: number = 20
 ): Promise<ListResponse<YouTubeSearchItem>> {
+  // Kiểm tra cache
+  const cacheKey = `search:${query}:${maxResults}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.timestamp > Date.now() - CACHE_TTL) {
+    return cached.data;
+  }
+
   console.log(`[YouTube Crawler] Searching for: ${query}`);
 
   const encodedQuery = encodeURIComponent(query);
@@ -373,7 +438,7 @@ export async function crawlSearchVideos(
       if (items.length >= maxResults) break;
     }
 
-    return {
+    const result = {
       kind: 'youtube#searchListResponse',
       etag: '',
       pageInfo: {
@@ -382,6 +447,14 @@ export async function crawlSearchVideos(
       },
       items,
     };
+
+    // Lưu vào cache
+    cache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now(),
+    });
+
+    return result;
   } catch (error) {
     console.error(`Error parsing search results for "${query}":`, error);
     return {

@@ -54,6 +54,10 @@ function convertToVideoCardData(
   }
 }
 
+// Cache cho các request API
+const cache = new Map<string, any>();
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
 async function getReviewVideos(
   type: string = 'general',
   maxResults: number = 8
@@ -62,6 +66,13 @@ async function getReviewVideos(
   error?: string;
   fallbackUrl?: string;
 }> {
+  // Kiểm tra cache
+  const cacheKey = `reviews:${type}:${maxResults}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.timestamp > Date.now() - CACHE_TTL) {
+    return cached.data;
+  }
+
   try {
     const response = await fetch(
       `${env.SITE_URL}/api/youtube/reviews?type=${type}&maxResults=${maxResults}`,
@@ -72,25 +83,48 @@ async function getReviewVideos(
 
     if (!response.ok) {
       const errorData = await response.json();
-      return {
+      const result = {
         videos: [],
         error: errorData.error || 'Failed to fetch review videos',
         fallbackUrl: errorData.fallbackUrl,
       };
+
+      // Lưu vào cache ngay cả khi có lỗi để tránh request liên tục
+      cache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now(),
+      });
+
+      return result;
     }
 
     const data: ListResponse<YouTubeSearchItem> = await response.json();
-
-    return {
+    const result = {
       videos: data.items?.map(convertToVideoCardData) || [],
     };
+
+    // Lưu vào cache
+    cache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now(),
+    });
+
+    return result;
   } catch (error) {
     console.error(`Error fetching ${type} review videos:`, error);
-    return {
+    const result = {
       videos: [],
       error: 'Có lỗi xảy ra khi tải video review. Vui lòng thử lại sau.',
       fallbackUrl: `https://www.youtube.com/results?search_query=review+phim+${type}`,
     };
+
+    // Lưu vào cache ngay cả khi có lỗi
+    cache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now(),
+    });
+
+    return result;
   }
 }
 
