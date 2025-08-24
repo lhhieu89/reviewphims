@@ -47,7 +47,7 @@ async function fetchYouTubeApi<T>(
 
   try {
     const response = await fetch(url.toString(), {
-      next: { revalidate: 300 }, // Cache for 5 minutes
+      next: { revalidate: 1800 }, // Cache for 30 minutes
     });
 
     if (!response.ok) {

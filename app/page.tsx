@@ -8,8 +8,9 @@ import {
 import { ReviewSection } from '@/components/ReviewSection';
 import { env } from '@/lib/env';
 
-export const dynamic = 'force-dynamic'; // Force dynamic rendering to avoid build-time API calls
-export const revalidate = 600; // 10 minutes
+// Remove force-dynamic to enable better caching
+// export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // 1 hour
 
 export const metadata: Metadata = {
   title: 'Review Phim - Xem Review Phim Mới Nhất 2025',
@@ -65,7 +66,7 @@ async function getReviewVideos(
     const response = await fetch(
       `${env.SITE_URL}/api/youtube/reviews?type=${type}&maxResults=${maxResults}`,
       {
-        next: { revalidate: 600 }, // Cache for 10 minutes
+        next: { revalidate: 3600 }, // Cache for 1 hour
       }
     );
 

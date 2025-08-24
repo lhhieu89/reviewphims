@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchVideos, YouTubeApiError } from '@/lib/youtube';
 import { rateLimiter } from '@/lib/rate-limiter';
+import { logQuotaUsage } from '@/lib/quota';
 import {
   REVIEW_KEYWORDS,
   getRandomKeyword,
@@ -55,8 +56,9 @@ export async function GET(request: NextRequest) {
         break;
       case 'mixed':
       default:
-        // Use multiple searches and combine results
+        // Use single random keyword from mixed categories to save quota
         const keywords = getMixedKeywords();
+<<<<<<< HEAD:app/api/youtube/reviews/route.ts
         const resultsPerKeyword = Math.ceil(maxResults / keywords.length);
 
         const searchPromises = keywords.map((keyword) =>
@@ -101,6 +103,12 @@ export async function GET(request: NextRequest) {
             },
           }
         );
+=======
+        const randomKeyword =
+          keywords[Math.floor(Math.random() * keywords.length)];
+        searchQuery = randomKeyword;
+        break;
+>>>>>>> 25e861aa087b691560e1dc63a44032a8fe6500d3:src/app/api/youtube/reviews/route.ts
     }
 
     // Single keyword search
@@ -111,6 +119,9 @@ export async function GET(request: NextRequest) {
       regionCode: 'VN',
     });
 
+    // Log quota usage
+    logQuotaUsage(`reviews-${type}`, 100);
+
     return NextResponse.json(
       {
         ...data,
@@ -118,7 +129,7 @@ export async function GET(request: NextRequest) {
       },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+          'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
           'X-RateLimit-Remaining': remaining.toString(),
         },
       }
