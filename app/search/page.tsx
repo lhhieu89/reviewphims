@@ -128,7 +128,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               Kết quả tìm kiếm cho &quot;{query}&quot;
             </h1>
             {totalResults && (
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground hidden">
                 Khoảng {formatNumber(totalResults)} kết quả
               </p>
             )}

@@ -52,17 +52,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('YouTube Search API Error:', error);
 
-    if (error instanceof Error && error.message.includes('quota')) {
-      const query = new URL(request.url).searchParams.get('q');
-      return NextResponse.json(
-        {
-          error: 'YouTube API quota exceeded. Please try again later.',
-          fallbackUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(query || '')}`,
-        },
-        { status: 503 }
-      );
-    }
-
+    // Vẫn trả về lỗi nếu không phải lỗi quota (lỗi quota đã được xử lý trong lib/youtube.ts)
     return NextResponse.json(
       { error: 'Failed to search videos' },
       { status: 500 }

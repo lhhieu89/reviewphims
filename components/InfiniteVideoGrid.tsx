@@ -173,7 +173,7 @@ export function InfiniteVideoGrid({
 
       {/* End of results indicator */}
       {!hasMore && videos.length > 0 && !loading && !error && (
-        <div className="text-center py-8">
+        <div className="text-center py-8 hidden">
           <p className="text-muted-foreground">
             🎬 Bạn đã xem hết tất cả video cho tìm kiếm này!
           </p>

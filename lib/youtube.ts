@@ -6,6 +6,12 @@ import type {
   ListResponse,
   YouTubeError,
 } from '@/types/youtube';
+import {
+  crawlVideoById,
+  crawlSearchVideos,
+  crawlRelatedVideos,
+  crawlMostPopular
+} from './youtube-crawler';
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 
@@ -65,6 +71,15 @@ async function fetchYouTubeApi<T>(
   }
 }
 
+// Kiểm tra xem có phải lỗi hết quota không
+function isQuotaExceededError(error: unknown): boolean {
+  return (
+    error instanceof YouTubeApiError &&
+    (error.status === 403 || error.code === '403') &&
+    error.message.toLowerCase().includes('quota')
+  );
+}
+
 export interface ListMostPopularParams {
   regionCode?: string;
   maxResults?: number;
@@ -93,7 +108,16 @@ export async function listMostPopular({
     params.videoCategoryId = videoCategoryId;
   }
 
-  return fetchYouTubeApi<ListResponse<YouTubeVideo>>('videos', params);
+  try {
+    return await fetchYouTubeApi<ListResponse<YouTubeVideo>>('videos', params);
+  } catch (error) {
+    // Nếu hết quota API, sử dụng phương pháp crawl
+    if (isQuotaExceededError(error)) {
+      console.log('YouTube API quota exceeded, falling back to web crawler');
+      return await crawlMostPopular(maxResults);
+    }
+    throw error;
+  }
 }
 
 export interface SearchVideosParams {
@@ -145,7 +169,16 @@ export async function searchVideos({
     params.videoDuration = videoDuration;
   }
 
-  return fetchYouTubeApi<ListResponse<YouTubeSearchItem>>('search', params);
+  try {
+    return await fetchYouTubeApi<ListResponse<YouTubeSearchItem>>('search', params);
+  } catch (error) {
+    // Nếu hết quota API, sử dụng phương pháp crawl
+    if (isQuotaExceededError(error)) {
+      console.log('YouTube API quota exceeded, falling back to web crawler');
+      return await crawlSearchVideos(q, maxResults);
+    }
+    throw error;
+  }
 }
 
 export interface GetVideoByIdParams {
@@ -160,12 +193,20 @@ export async function getVideoById({
     id,
   };
 
-  const response = await fetchYouTubeApi<ListResponse<YouTubeVideo>>(
-    'videos',
-    params
-  );
-
-  return response.items[0] || null;
+  try {
+    const response = await fetchYouTubeApi<ListResponse<YouTubeVideo>>(
+      'videos',
+      params
+    );
+    return response.items[0] || null;
+  } catch (error) {
+    // Nếu hết quota API, sử dụng phương pháp crawl
+    if (isQuotaExceededError(error)) {
+      console.log('YouTube API quota exceeded, falling back to web crawler');
+      return await crawlVideoById(id);
+    }
+    throw error;
+  }
 }
 
 export interface GetChannelByIdParams {
@@ -197,38 +238,47 @@ export async function listRelatedVideos({
   id,
   maxResults = 12,
 }: ListRelatedVideosParams): Promise<ListResponse<YouTubeSearchItem>> {
-  // Note: YouTube deprecated relatedToVideoId, so we'll search for videos from the same channel
-  // First get the video to find its channel
-  const video = await getVideoById({ id });
+  try {
+    // Note: YouTube deprecated relatedToVideoId, so we'll search for videos from the same channel
+    // First get the video to find its channel
+    const video = await getVideoById({ id });
 
-  if (!video) {
-    return {
-      kind: 'youtube#searchListResponse',
-      etag: '',
-      pageInfo: { totalResults: 0, resultsPerPage: 0 },
-      items: [],
+    if (!video) {
+      return {
+        kind: 'youtube#searchListResponse',
+        etag: '',
+        pageInfo: { totalResults: 0, resultsPerPage: 0 },
+        items: [],
+      };
+    }
+
+    const params: Record<string, string> = {
+      part: 'snippet',
+      type: 'video',
+      channelId: video.snippet.channelId,
+      maxResults: (maxResults + 1).toString(), // Get one extra to filter out current video
+      order: 'relevance',
     };
+
+    const response = await fetchYouTubeApi<ListResponse<YouTubeSearchItem>>(
+      'search',
+      params
+    );
+
+    // Filter out the current video and limit results
+    response.items = response.items
+      .filter((item) => item.id.videoId !== id)
+      .slice(0, maxResults);
+
+    return response;
+  } catch (error) {
+    // Nếu hết quota API, sử dụng phương pháp crawl
+    if (isQuotaExceededError(error)) {
+      console.log('YouTube API quota exceeded, falling back to web crawler');
+      return await crawlRelatedVideos(id, maxResults);
+    }
+    throw error;
   }
-
-  const params: Record<string, string> = {
-    part: 'snippet',
-    type: 'video',
-    channelId: video.snippet.channelId,
-    maxResults: (maxResults + 1).toString(), // Get one extra to filter out current video
-    order: 'relevance',
-  };
-
-  const response = await fetchYouTubeApi<ListResponse<YouTubeSearchItem>>(
-    'search',
-    params
-  );
-
-  // Filter out the current video and limit results
-  response.items = response.items
-    .filter((item) => item.id.videoId !== id)
-    .slice(0, maxResults);
-
-  return response;
 }
 
 export { YouTubeApiError };

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { searchVideos } from '@/lib/youtube';
+import { searchVideos, YouTubeApiError } from '@/lib/youtube';
 import { rateLimiter } from '@/lib/rate-limiter';
 import {
   REVIEW_KEYWORDS,
@@ -65,6 +65,15 @@ export async function GET(request: NextRequest) {
             maxResults: resultsPerKeyword,
             order: 'relevance', // Use relevance instead of date
             regionCode: 'VN',
+          }).catch(error => {
+            console.error(`Error searching for "${keyword}":`, error);
+            // Trả về một kết quả trống nếu có lỗi
+            return {
+              kind: 'youtube#searchListResponse',
+              etag: '',
+              pageInfo: { totalResults: 0, resultsPerPage: 0 },
+              items: [],
+            };
           })
         );
 
@@ -117,17 +126,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('YouTube Reviews API Error:', error);
 
-    if (error instanceof Error && error.message.includes('quota')) {
-      return NextResponse.json(
-        {
-          error: 'YouTube API quota exceeded. Please try again later.',
-          fallbackUrl:
-            'https://www.youtube.com/results?search_query=review+phim+2025',
-        },
-        { status: 503 }
-      );
-    }
-
+    // Vẫn trả về lỗi nếu không phải lỗi quota (lỗi quota đã được xử lý trong lib/youtube.ts)
     return NextResponse.json(
       {
         error: 'Failed to fetch review videos. Please try again later.',

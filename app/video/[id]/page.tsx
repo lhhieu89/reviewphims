@@ -2,9 +2,11 @@ import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import { VideoGrid } from '@/components/VideoGrid';
 import { VideoDescription } from '@/components/VideoDescription';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
+import RelatedVideos, { RelatedVideosSkeleton } from '@/components/RelatedVideos';
 import { env } from '@/lib/env';
 import {
   formatViewCount,
@@ -31,7 +33,6 @@ interface VideoPageProps {
 async function getVideoData(id: string): Promise<{
   video: YouTubeVideo;
   channel: YouTubeChannel | null;
-  relatedVideos: VideoCardData[];
 }> {
   try {
     // Fetch video details
@@ -60,31 +61,7 @@ async function getVideoData(id: string): Promise<{
     //   console.error('Error fetching channel:', error);
     // }
 
-    // Fetch related videos
-    let relatedVideos: VideoCardData[] = [];
-    try {
-      const relatedResponse = await fetch(
-        `${env.SITE_URL}/api/youtube/related?id=${id}&maxResults=12`,
-        { next: { revalidate: 300 } }
-      );
-      if (relatedResponse.ok) {
-        const relatedData: ListResponse<YouTubeSearchItem> =
-          await relatedResponse.json();
-        relatedVideos = relatedData.items.map(
-          (item): VideoCardData => ({
-            id: item.id.videoId,
-            title: item.snippet.title,
-            channelTitle: item.snippet.channelTitle,
-            publishedAt: item.snippet.publishedAt,
-            thumbnails: item.snippet.thumbnails,
-          })
-        );
-      }
-    } catch (error) {
-      console.error('Error fetching related videos:', error);
-    }
-
-    return { video, channel, relatedVideos };
+    return { video, channel };
   } catch (error) {
     console.error('Error fetching video data:', error);
     throw error;
@@ -143,7 +120,7 @@ export async function generateMetadata({
 
 export default async function VideoPage({ params }: VideoPageProps) {
   try {
-    const { video, channel, relatedVideos } = await getVideoData(params.id);
+    const { video, channel } = await getVideoData(params.id);
 
     const channelThumbnail = channel
       ? getBestThumbnail(channel.snippet.thumbnails)
@@ -248,11 +225,11 @@ export default async function VideoPage({ params }: VideoPageProps) {
                       </span>
                     )}
                     {video.statistics?.likeCount && (
-                      <span>
+                      <span className="hidden">
                         {formatViewCount(video.statistics.likeCount)} lượt thích
                       </span>
                     )}
-                    <span>{formatRelativeTime(video.snippet.publishedAt)}</span>
+                    <span className="hidden">{formatRelativeTime(video.snippet.publishedAt)}</span>
                   </div>
                 </div>
 
@@ -269,42 +246,9 @@ export default async function VideoPage({ params }: VideoPageProps) {
                 Video liên quan
               </h2>
 
-              {relatedVideos.length > 0 ? (
-                <div className="space-y-4">
-                  {relatedVideos.map((relatedVideo) => (
-                    <Link
-                      key={relatedVideo.id}
-                      href={`/video/${relatedVideo.id}`}
-                      className="flex gap-3 group hover:bg-card p-2 rounded-lg transition-colors"
-                    >
-                      <div className="relative w-40 aspect-video bg-muted rounded overflow-hidden flex-shrink-0">
-                        <Image
-                          src={getBestThumbnail(relatedVideo.thumbnails)}
-                          alt={relatedVideo.title}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-200"
-                          sizes="160px"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-                          {relatedVideo.title}
-                        </h3>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {relatedVideo.channelTitle}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatRelativeTime(relatedVideo.publishedAt)}
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  Không có video liên quan
-                </p>
-              )}
+              <Suspense fallback={<RelatedVideosSkeleton />}>
+                <RelatedVideos videoId={params.id} />
+              </Suspense>
             </div>
           </div>
         </div>
