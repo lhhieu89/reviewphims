@@ -16,7 +16,7 @@ class VideoCache {
   private cache = new Map<string, CacheData>();
   private readonly CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
   private readonly WATCHED_COOKIE_NAME = 'watched_videos';
-  
+
   // Helper to convert API response to VideoCardData
   private convertToVideoCardData(item: YouTubeSearchItem): VideoCardData {
     return {
@@ -31,22 +31,24 @@ class VideoCache {
   // Get watched video IDs from cookies (for browser environment)
   private getWatchedVideoIds(): string[] {
     if (typeof window === 'undefined') return [];
-    
+
     try {
       const cookieValue = document.cookie
         .split('; ')
-        .find(row => row.startsWith(this.WATCHED_COOKIE_NAME + '='));
-      
+        .find((row) => row.startsWith(this.WATCHED_COOKIE_NAME + '='));
+
       if (!cookieValue) return [];
-      
-      const data: WatchedVideos = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]));
-      
+
+      const data: WatchedVideos = JSON.parse(
+        decodeURIComponent(cookieValue.split('=')[1])
+      );
+
       // Check if data is expired (older than 30 days)
       if (Date.now() - data.timestamp > 30 * 24 * 60 * 60 * 1000) {
         this.clearWatchedVideos();
         return [];
       }
-      
+
       return data.videoIds || [];
     } catch {
       return [];
@@ -56,16 +58,16 @@ class VideoCache {
   // Add video to watched list
   public markAsWatched(videoId: string): void {
     if (typeof window === 'undefined') return;
-    
+
     const watchedIds = this.getWatchedVideoIds();
     if (watchedIds.includes(videoId)) return;
-    
+
     const updatedIds = [...watchedIds, videoId].slice(-100); // Keep only last 100 watched videos
     const data: WatchedVideos = {
       videoIds: updatedIds,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
+
     document.cookie = `${this.WATCHED_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(data))}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
   }
 
@@ -78,14 +80,17 @@ class VideoCache {
   // Filter out watched videos
   private filterWatchedVideos(videos: VideoCardData[]): VideoCardData[] {
     const watchedIds = this.getWatchedVideoIds();
-    return videos.filter(video => !watchedIds.includes(video.id));
+    return videos.filter((video) => !watchedIds.includes(video.id));
   }
 
   // Fetch and cache videos for a specific type
-  async fetchAndCacheVideos(type: 'general' | 'costume_drama' | 'trailers', maxResults: number = 200): Promise<VideoCardData[]> {
+  async fetchAndCacheVideos(
+    type: 'general' | 'costume_drama' | 'trailers',
+    maxResults: number = 200
+  ): Promise<VideoCardData[]> {
     const cacheKey = `${type}:${maxResults}`;
     const cached = this.cache.get(cacheKey);
-    
+
     // Return cached data if still valid
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
       return this.filterWatchedVideos(cached.videos);
@@ -101,18 +106,19 @@ class VideoCache {
         regionCode: 'VN',
       });
 
-      const videos = response.items?.map(item => this.convertToVideoCardData(item)) || [];
-      
+      const videos =
+        response.items?.map((item) => this.convertToVideoCardData(item)) || [];
+
       // Cache the results
       this.cache.set(cacheKey, {
         videos,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       return this.filterWatchedVideos(videos);
     } catch (error) {
       console.error(`Error fetching videos for ${type}:`, error);
-      
+
       // Return cached data even if expired, or empty array
       if (cached) {
         return this.filterWatchedVideos(cached.videos);
@@ -122,33 +128,42 @@ class VideoCache {
   }
 
   // Get random videos from cache
-  getRandomVideos(type: 'general' | 'costume_drama' | 'trailers', count: number): VideoCardData[] {
+  getRandomVideos(
+    type: 'general' | 'costume_drama' | 'trailers',
+    count: number
+  ): VideoCardData[] {
     const cacheKey = `${type}:200`; // Default to 200 max results cache
     const cached = this.cache.get(cacheKey);
-    
+
     if (!cached) {
       return [];
     }
 
     const availableVideos = this.filterWatchedVideos(cached.videos);
-    
+
     // Shuffle and return random selection
     const shuffled = [...availableVideos].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, count);
   }
 
   // Get cache status
-  getCacheStatus(): Record<string, { count: number; lastUpdated: Date; isExpired: boolean }> {
-    const status: Record<string, { count: number; lastUpdated: Date; isExpired: boolean }> = {};
-    
+  getCacheStatus(): Record<
+    string,
+    { count: number; lastUpdated: Date; isExpired: boolean }
+  > {
+    const status: Record<
+      string,
+      { count: number; lastUpdated: Date; isExpired: boolean }
+    > = {};
+
     this.cache.forEach((data, key) => {
       status[key] = {
         count: data.videos.length,
         lastUpdated: new Date(data.timestamp),
-        isExpired: Date.now() - data.timestamp >= this.CACHE_TTL
+        isExpired: Date.now() - data.timestamp >= this.CACHE_TTL,
       };
     });
-    
+
     return status;
   }
 
@@ -163,7 +178,7 @@ class VideoCache {
       await Promise.all([
         this.fetchAndCacheVideos('general', 200),
         this.fetchAndCacheVideos('costume_drama', 200),
-        this.fetchAndCacheVideos('trailers', 200)
+        this.fetchAndCacheVideos('trailers', 200),
       ]);
       console.log('Video cache initialized successfully');
     } catch (error) {

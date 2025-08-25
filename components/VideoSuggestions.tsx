@@ -19,20 +19,22 @@ const WATCHED_COOKIE_NAME = 'watched_videos';
 function getWatchedVideoIds(): string[] {
   try {
     if (typeof document === 'undefined') return [];
-    
+
     const cookieValue = document.cookie
       .split('; ')
-      .find(row => row.startsWith(WATCHED_COOKIE_NAME + '='));
-    
+      .find((row) => row.startsWith(WATCHED_COOKIE_NAME + '='));
+
     if (!cookieValue) return [];
-    
-    const data: WatchedVideos = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]));
-    
+
+    const data: WatchedVideos = JSON.parse(
+      decodeURIComponent(cookieValue.split('=')[1])
+    );
+
     // Check if data is not expired (older than 30 days)
     if (Date.now() - data.timestamp > 30 * 24 * 60 * 60 * 1000) {
       return [];
     }
-    
+
     return data.videoIds || [];
   } catch (error) {
     console.error('Error reading watched videos:', error);
@@ -40,7 +42,10 @@ function getWatchedVideoIds(): string[] {
   }
 }
 
-export function VideoSuggestions({ currentVideoId, className = '' }: VideoSuggestionsProps) {
+export function VideoSuggestions({
+  currentVideoId,
+  className = '',
+}: VideoSuggestionsProps) {
   const [videos, setVideos] = useState<VideoCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,27 +55,28 @@ export function VideoSuggestions({ currentVideoId, className = '' }: VideoSugges
       try {
         setLoading(true);
         setError(null);
-        
+
         // Fetch random videos from cache (excluding current video)
         const response = await fetch('/api/cache/videos?type=general&count=24');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch suggestions');
         }
-        
+
         const data = await response.json();
         const allVideos = data.items || [];
-        
+
         // Get watched video IDs
         const watchedIds = getWatchedVideoIds();
-        
+
         // Filter out current video and watched videos, then get random 20
         const filteredVideos = allVideos
-          .filter((video: VideoCardData) => 
-            video.id !== currentVideoId && !watchedIds.includes(video.id)
+          .filter(
+            (video: VideoCardData) =>
+              video.id !== currentVideoId && !watchedIds.includes(video.id)
           )
           .slice(0, 20);
-        
+
         setVideos(filteredVideos);
       } catch (err) {
         console.error('Error fetching video suggestions:', err);

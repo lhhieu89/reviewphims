@@ -4,12 +4,14 @@ import { videoCache } from '@/lib/video-cache';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') as 'general' | 'costume_drama' | 'trailers' || 'general';
+    const type =
+      (searchParams.get('type') as 'general' | 'costume_drama' | 'trailers') ||
+      'general';
     const count = parseInt(searchParams.get('count') || '16', 10);
 
     // Get random videos from cache
     let videos = videoCache.getRandomVideos(type, count);
-    
+
     // If cache is empty or insufficient videos, try to fetch and cache
     if (videos.length < count) {
       await videoCache.fetchAndCacheVideos(type, 200);
@@ -21,7 +23,7 @@ export async function GET(request: NextRequest) {
         items: videos,
         total: videos.length,
         type,
-        fromCache: true
+        fromCache: true,
       },
       {
         headers: {
@@ -41,22 +43,22 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { action, videoId } = await request.json();
-    
+
     if (action === 'mark_watched' && videoId) {
       // This will be handled on client side
       return NextResponse.json({ success: true });
     }
-    
+
     if (action === 'initialize_cache') {
       await videoCache.initializeCache();
       return NextResponse.json({ success: true, message: 'Cache initialized' });
     }
-    
+
     if (action === 'clear_cache') {
       videoCache.clearCache();
       return NextResponse.json({ success: true, message: 'Cache cleared' });
     }
-    
+
     if (action === 'cache_status') {
       const status = videoCache.getCacheStatus();
       return NextResponse.json({ status });

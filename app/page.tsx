@@ -95,11 +95,13 @@ async function getCachedVideos(
 
 export default async function HomePage() {
   // Use cached videos with random selection
-  const [latestReviews, costumeDramaReviews, trailerVideos] = await Promise.all([
-    getCachedVideos('general', 16),
-    getCachedVideos('costume_drama', 16), 
-    getCachedVideos('trailers', 16),
-  ]);
+  const [latestReviews, costumeDramaReviews, trailerVideos] = await Promise.all(
+    [
+      getCachedVideos('general', 16),
+      getCachedVideos('costume_drama', 16),
+      getCachedVideos('trailers', 16),
+    ]
+  );
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-16">

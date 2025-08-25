@@ -20,27 +20,29 @@ export function WatchedVideoTracker({ videoId }: WatchedVideoTrackerProps) {
         // Get existing watched videos
         const cookieValue = document.cookie
           .split('; ')
-          .find(row => row.startsWith(WATCHED_COOKIE_NAME + '='));
-        
+          .find((row) => row.startsWith(WATCHED_COOKIE_NAME + '='));
+
         let watchedIds: string[] = [];
-        
+
         if (cookieValue) {
-          const data: WatchedVideos = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]));
-          
+          const data: WatchedVideos = JSON.parse(
+            decodeURIComponent(cookieValue.split('=')[1])
+          );
+
           // Check if data is not expired (older than 30 days)
           if (Date.now() - data.timestamp <= 30 * 24 * 60 * 60 * 1000) {
             watchedIds = data.videoIds || [];
           }
         }
-        
+
         // Add current video if not already watched
         if (!watchedIds.includes(videoId)) {
           const updatedIds = [...watchedIds, videoId].slice(-100); // Keep only last 100 watched videos
           const data: WatchedVideos = {
             videoIds: updatedIds,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           };
-          
+
           document.cookie = `${WATCHED_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(data))}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
         }
       } catch (error) {

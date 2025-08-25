@@ -22,20 +22,22 @@ const WATCHED_COOKIE_NAME = 'watched_videos';
 function getWatchedVideoIds(): string[] {
   try {
     if (typeof document === 'undefined') return [];
-    
+
     const cookieValue = document.cookie
       .split('; ')
-      .find(row => row.startsWith(WATCHED_COOKIE_NAME + '='));
-    
+      .find((row) => row.startsWith(WATCHED_COOKIE_NAME + '='));
+
     if (!cookieValue) return [];
-    
-    const data: WatchedVideos = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]));
-    
+
+    const data: WatchedVideos = JSON.parse(
+      decodeURIComponent(cookieValue.split('=')[1])
+    );
+
     // Check if data is not expired (older than 30 days)
     if (Date.now() - data.timestamp > 30 * 24 * 60 * 60 * 1000) {
       return [];
     }
-    
+
     return data.videoIds || [];
   } catch (error) {
     console.error('Error reading watched videos:', error);
@@ -54,14 +56,16 @@ export function ClientVideoSection({
 
   useEffect(() => {
     const watchedIds = getWatchedVideoIds();
-    
+
     if (watchedIds.length === 0) {
       setFilteredVideos(videos);
       return;
     }
 
     // Filter out watched videos
-    const unwatchedVideos = videos.filter(video => !watchedIds.includes(video.id));
+    const unwatchedVideos = videos.filter(
+      (video) => !watchedIds.includes(video.id)
+    );
     setFilteredVideos(unwatchedVideos);
   }, [videos]);
 
