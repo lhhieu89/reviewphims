@@ -96,7 +96,7 @@ export async function generateMetadata({
       title: videoData.title,
       description: `Video từ ${videoData.author || 'YouTube'}: ${videoData.title}`,
       alternates: {
-        canonical: `/video/${params.id}`,
+        canonical: `${env.SITE_URL}/video/${params.id}`,
       },
       openGraph: {
         title: videoData.title,

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description:
     'Khám phá những video review phim mới nhất và hay nhất từ YouTube. Tìm kiếm, xem và chia sẻ những bộ phim được đánh giá cao.',
   alternates: {
-    canonical: '/',
+    canonical: `${env.SITE_URL}/`,
   },
   openGraph: {
     title: 'Review Phim - Khám phá video review phim hay nhất',

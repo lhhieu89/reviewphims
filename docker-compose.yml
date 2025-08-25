@@ -13,14 +13,14 @@ services:
       - PORT=3001
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
       - YOUTUBE_REGION_CODE=${YOUTUBE_REGION_CODE:-VN}
-      - SITE_URL=http://review-phim-app:3001
+      - SITE_URL=${SITE_URL}
     env_file:
       - .env
     networks:
       - review-phim-network
     labels:
       - 'traefik.enable=true'
-      - 'traefik.http.routers.review-phim.rule=Host(`your-domain.com`)'
+      - 'traefik.http.routers.review-phim.rule=Host(`reviewphims.com`)'
       - 'traefik.http.routers.review-phim.tls=true'
       - 'traefik.http.routers.review-phim.tls.certresolver=letsencrypt'
       - 'traefik.http.services.review-phim.loadbalancer.server.port=3001'

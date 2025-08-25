@@ -26,7 +26,7 @@ export async function generateMetadata({
       title: 'Tìm kiếm video',
       description: 'Tìm kiếm video phim yêu thích của bạn trên YouTube.',
       alternates: {
-        canonical: '/search',
+        canonical: `${env.SITE_URL}/search`,
       },
     };
   }
@@ -35,7 +35,7 @@ export async function generateMetadata({
     title: `Tìm kiếm: ${query}`,
     description: `Kết quả tìm kiếm cho "${query}". Khám phá những video phim liên quan đến từ khóa này.`,
     alternates: {
-      canonical: `/search?q=${encodeURIComponent(query)}`,
+      canonical: `${env.SITE_URL}/search?q=${encodeURIComponent(query)}`,
     },
     openGraph: {
       title: `Tìm kiếm: ${query} | Review Phim`,
