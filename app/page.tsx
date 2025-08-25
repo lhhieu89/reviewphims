@@ -94,12 +94,12 @@ async function getCachedVideos(
 }
 
 export default async function HomePage() {
-  // Use cached videos with random selection
+  // Use cached videos with random selection - get more than needed for filtering
   const [latestReviews, costumeDramaReviews, trailerVideos] = await Promise.all(
     [
-      getCachedVideos('general', 16),
-      getCachedVideos('costume_drama', 16),
-      getCachedVideos('trailers', 16),
+      getCachedVideos('general', 32),
+      getCachedVideos('costume_drama', 32),
+      getCachedVideos('trailers', 32),
     ]
   );
 
@@ -112,6 +112,7 @@ export default async function HomePage() {
         viewAllLink="/search?q=review+phim+2025"
         error={latestReviews.error}
         fallbackUrl={latestReviews.fallbackUrl}
+        cacheType="general"
       />
 
       {/* Costume Drama Reviews */}
@@ -121,6 +122,7 @@ export default async function HomePage() {
         viewAllLink="/search?q=review+phim+cung+đấu"
         error={costumeDramaReviews.error}
         fallbackUrl={costumeDramaReviews.fallbackUrl}
+        cacheType="costume_drama"
       />
 
       {/* Movie Trailers */}
@@ -130,6 +132,7 @@ export default async function HomePage() {
         viewAllLink="/search?q=trailer+phim+2025"
         error={trailerVideos.error}
         fallbackUrl={trailerVideos.fallbackUrl}
+        cacheType="trailers"
       />
     </div>
   );

@@ -56,28 +56,45 @@ export function VideoSuggestions({
         setLoading(true);
         setError(null);
 
-        // Fetch random videos from cache (excluding current video)
-        const response = await fetch('/api/cache/videos?type=general&count=24');
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch suggestions');
-        }
-
-        const data = await response.json();
-        const allVideos = data.items || [];
-
         // Get watched video IDs
         const watchedIds = getWatchedVideoIds();
+        const targetCount = 20;
+        let allFilteredVideos: VideoCardData[] = [];
 
-        // Filter out current video and watched videos, then get random 20
-        const filteredVideos = allVideos
-          .filter(
-            (video: VideoCardData) =>
-              video.id !== currentVideoId && !watchedIds.includes(video.id)
-          )
-          .slice(0, 20);
+        // Try to get enough videos by fetching in batches
+        let fetchCount = 50; // Start with more videos
+        let attempts = 0;
+        const maxAttempts = 3;
 
-        setVideos(filteredVideos);
+        while (allFilteredVideos.length < targetCount && attempts < maxAttempts) {
+          const response = await fetch(`/api/cache/videos?type=general&count=${fetchCount}`);
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch suggestions');
+          }
+
+          const data = await response.json();
+          const fetchedVideos = data.items || [];
+
+          // Filter out current video and watched videos
+          const newFilteredVideos = fetchedVideos
+            .filter(
+              (video: VideoCardData) =>
+                video.id !== currentVideoId && 
+                !watchedIds.includes(video.id) &&
+                !allFilteredVideos.some(existing => existing.id === video.id)
+            );
+
+          allFilteredVideos = [...allFilteredVideos, ...newFilteredVideos];
+          
+          // Increase fetch count for next attempt if needed
+          fetchCount = Math.min(100, fetchCount * 1.5);
+          attempts++;
+        }
+
+        // Take only the target count
+        const finalVideos = allFilteredVideos.slice(0, targetCount);
+        setVideos(finalVideos);
       } catch (err) {
         console.error('Error fetching video suggestions:', err);
         setError('Không thể tải video gợi ý');

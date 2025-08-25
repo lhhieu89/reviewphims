@@ -93,7 +93,7 @@ class VideoCache {
 
     // Return cached data if still valid
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      return this.filterWatchedVideos(cached.videos);
+      return cached.videos;
     }
 
     try {
@@ -115,19 +115,19 @@ class VideoCache {
         timestamp: Date.now(),
       });
 
-      return this.filterWatchedVideos(videos);
+      return videos;
     } catch (error) {
       console.error(`Error fetching videos for ${type}:`, error);
 
       // Return cached data even if expired, or empty array
       if (cached) {
-        return this.filterWatchedVideos(cached.videos);
+        return cached.videos;
       }
       return [];
     }
   }
 
-  // Get random videos from cache
+  // Get random videos from cache (no filtering - handled client-side)
   getRandomVideos(
     type: 'general' | 'costume_drama' | 'trailers',
     count: number
@@ -139,10 +139,8 @@ class VideoCache {
       return [];
     }
 
-    const availableVideos = this.filterWatchedVideos(cached.videos);
-
-    // Shuffle and return random selection
-    const shuffled = [...availableVideos].sort(() => 0.5 - Math.random());
+    // Shuffle and return random selection (no watched video filtering on server)
+    const shuffled = [...cached.videos].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, count);
   }
 
