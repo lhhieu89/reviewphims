@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
+import { VideoSuggestions } from '@/components/VideoSuggestions';
+import { WatchedVideoTracker } from '@/components/WatchedVideoTracker';
 import { env } from '@/lib/env';
 
 export const revalidate = 1800; // 30 minutes for better caching
@@ -213,9 +215,12 @@ export default async function VideoPage({ params }: VideoPageProps) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
 
-        <div className="container mx-auto px-4 py-8">
+        {/* Watched video tracker */}
+        <WatchedVideoTracker videoId={params.id} />
+
+        <div className="container mx-auto px-4 py-8 space-y-12">
+          {/* Video player */}
           <div className="max-w-4xl mx-auto">
-            {/* Video player */}
             <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-6">
               <YouTubePlayer
                 videoId={params.id}
@@ -243,6 +248,9 @@ export default async function VideoPage({ params }: VideoPageProps) {
               )}
             </div>
           </div>
+
+          {/* Video suggestions - full width like homepage */}
+          <VideoSuggestions currentVideoId={params.id} />
         </div>
       </>
     );

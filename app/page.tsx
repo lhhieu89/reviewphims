@@ -5,7 +5,7 @@ import {
   YouTubeSearchItem,
   VideoCardData,
 } from '@/types/youtube';
-import { ReviewSection } from '@/components/ReviewSection';
+import { ClientVideoSection } from '@/components/ClientVideoSection';
 import { env } from '@/lib/env';
 
 // Remove force-dynamic to enable better caching
@@ -54,94 +54,57 @@ function convertToVideoCardData(
   }
 }
 
-// Cache cho các request API
-const cache = new Map<string, any>();
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour
-
-async function getReviewVideos(
-  type: string = 'general',
-  maxResults: number = 8
+async function getCachedVideos(
+  type: 'general' | 'costume_drama' | 'trailers',
+  count: number = 16
 ): Promise<{
   videos: VideoCardData[];
   error?: string;
   fallbackUrl?: string;
 }> {
-  // Kiểm tra cache
-  const cacheKey = `reviews:${type}:${maxResults}`;
-  const cached = cache.get(cacheKey);
-  if (cached && cached.timestamp > Date.now() - CACHE_TTL) {
-    return cached.data;
-  }
-
   try {
     const response = await fetch(
-      `${env.SITE_URL}/api/youtube/reviews?type=${type}&maxResults=${maxResults}`,
+      `${env.SITE_URL}/api/cache/videos?type=${type}&count=${count}`,
       {
-        next: { revalidate: 3600 }, // Cache for 1 hour
+        next: { revalidate: 300 }, // Cache for 5 minutes
       }
     );
 
     if (!response.ok) {
       const errorData = await response.json();
-      const result = {
+      return {
         videos: [],
-        error: errorData.error || 'Failed to fetch review videos',
-        fallbackUrl: errorData.fallbackUrl,
+        error: errorData.error || 'Failed to fetch cached videos',
+        fallbackUrl: `https://www.youtube.com/results?search_query=review+phim+${type}`,
       };
-
-      // Lưu vào cache ngay cả khi có lỗi để tránh request liên tục
-      cache.set(cacheKey, {
-        data: result,
-        timestamp: Date.now(),
-      });
-
-      return result;
     }
 
-    const data: ListResponse<YouTubeSearchItem> = await response.json();
-    const result = {
-      videos: data.items?.map(convertToVideoCardData) || [],
+    const data = await response.json();
+    return {
+      videos: data.items || [],
     };
-
-    // Lưu vào cache
-    cache.set(cacheKey, {
-      data: result,
-      timestamp: Date.now(),
-    });
-
-    return result;
   } catch (error) {
-    console.error(`Error fetching ${type} review videos:`, error);
-    const result = {
+    console.error(`Error fetching cached videos for ${type}:`, error);
+    return {
       videos: [],
       error: 'Có lỗi xảy ra khi tải video review. Vui lòng thử lại sau.',
       fallbackUrl: `https://www.youtube.com/results?search_query=review+phim+${type}`,
     };
-
-    // Lưu vào cache ngay cả khi có lỗi
-    cache.set(cacheKey, {
-      data: result,
-      timestamp: Date.now(),
-    });
-
-    return result;
   }
 }
 
 export default async function HomePage() {
-  // Only 3 requests for homepage as requested
-  const [latestReviews, costumeDramaReviews, trailerVideos] = await Promise.all(
-    [
-      getReviewVideos('general', 12), // Reduced size
-      getReviewVideos('costume_drama', 12), // Reduced size
-      getReviewVideos('trailers', 12), // Reduced size
-    ]
-  );
+  // Use cached videos with random selection
+  const [latestReviews, costumeDramaReviews, trailerVideos] = await Promise.all([
+    getCachedVideos('general', 16),
+    getCachedVideos('costume_drama', 16), 
+    getCachedVideos('trailers', 16),
+  ]);
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-16">
       {/* Latest Reviews */}
-      <ReviewSection
+      <ClientVideoSection
         title="📺 Review Phim Mới Nhất"
         videos={latestReviews.videos}
         viewAllLink="/search?q=review+phim+2025"
@@ -150,7 +113,7 @@ export default async function HomePage() {
       />
 
       {/* Costume Drama Reviews */}
-      <ReviewSection
+      <ClientVideoSection
         title="👑 Review Phim Cung Đấu"
         videos={costumeDramaReviews.videos}
         viewAllLink="/search?q=review+phim+cung+đấu"
@@ -159,7 +122,7 @@ export default async function HomePage() {
       />
 
       {/* Movie Trailers */}
-      <ReviewSection
+      <ClientVideoSection
         title="🎥 Trailer Phim Mới Nhất"
         videos={trailerVideos.videos}
         viewAllLink="/search?q=trailer+phim+2025"
