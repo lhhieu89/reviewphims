@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
 import { VideoSuggestions } from '@/components/VideoSuggestions';
 import { WatchedVideoTracker } from '@/components/WatchedVideoTracker';
+import { StructuredData } from '@/components/StructuredData';
 import { env } from '@/lib/env';
 
 export const revalidate = 1800; // 30 minutes for better caching
@@ -192,27 +193,24 @@ export default async function VideoPage({ params }: VideoPageProps) {
       );
     }
 
-    // Structured data for SEO (simplified)
-    const structuredData = {
-      '@context': 'https://schema.org',
-      '@type': 'VideoObject',
-      name: videoData.title || 'YouTube Video',
-      thumbnailUrl:
-        videoData.image || `https://i.ytimg.com/vi/${params.id}/hqdefault.jpg`,
-      embedUrl: `https://www.youtube-nocookie.com/embed/${params.id}`,
-      author: videoData.author
-        ? {
-            '@type': 'Person',
-            name: videoData.author,
-          }
-        : undefined,
-    };
-
     return (
       <>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        <StructuredData
+          type="video"
+          data={{
+            title: videoData.title || 'YouTube Video',
+            description: `Video từ ${videoData.author || 'YouTube'}: ${videoData.title}`,
+            thumbnailUrl:
+              videoData.image ||
+              `https://i.ytimg.com/vi/${params.id}/hqdefault.jpg`,
+            embedUrl: `https://www.youtube-nocookie.com/embed/${params.id}`,
+            url: `${env.SITE_URL}/video/${params.id}`,
+            author: videoData.author || 'YouTube',
+            uploadDate: new Date().toISOString(),
+            publisher: {
+              name: 'YouTube',
+            },
+          }}
         />
 
         {/* Watched video tracker */}

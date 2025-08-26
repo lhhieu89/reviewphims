@@ -116,7 +116,7 @@ export default async function HomePage() {
     <div className="container mx-auto px-4 py-8 space-y-16">
       {/* Latest Reviews */}
       <ClientVideoSection
-        title="📺 Review Phim Mới Nhất"
+        title="📺 Review Phim Hay Nhất"
         videos={latestReviews.videos}
         viewAllLink="/search?q=review+phim+2025"
         error={latestReviews.error}
@@ -136,7 +136,7 @@ export default async function HomePage() {
 
       {/* Movie Trailers */}
       <ClientVideoSection
-        title="🎥 Trailer Phim Mới Nhất"
+        title="🎥 Trailer Phim Mới"
         videos={trailerVideos.videos}
         viewAllLink="/search?q=trailer+phim+2025"
         error={trailerVideos.error}
