@@ -108,8 +108,13 @@ async function searchVideos(query: string): Promise<{
       maxResults: '20',
     });
 
+    // Use internal Docker port for server-side fetching
+    const baseUrl = process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3000'  // Internal Docker port
+      : env.SITE_URL;
+
     const response = await fetch(
-      `${env.SITE_URL}/api/youtube/search?${params.toString()}`,
+      `${baseUrl}/api/youtube/search?${params.toString()}`,
       {
         next: { revalidate: 300 },
       }
