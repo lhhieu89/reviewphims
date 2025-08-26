@@ -47,7 +47,9 @@ export async function generateMetadata({
 }
 
 // Enrich videos with additional data (duration, viewCount) from videos API
-async function enrichVideosWithDetails(videos: VideoCardData[]): Promise<VideoCardData[]> {
+async function enrichVideosWithDetails(
+  videos: VideoCardData[]
+): Promise<VideoCardData[]> {
   try {
     // Process videos in batches of 10 (YouTube API limit for video details)
     const batchSize = 10;
@@ -55,8 +57,8 @@ async function enrichVideosWithDetails(videos: VideoCardData[]): Promise<VideoCa
 
     for (let i = 0; i < videos.length; i += batchSize) {
       const batch = videos.slice(i, i + batchSize);
-      const videoIds = batch.map(v => v.id);
-      
+      const videoIds = batch.map((v) => v.id);
+
       // Get video details for this batch
       const enrichPromises = videoIds.map(async (id) => {
         try {
@@ -84,7 +86,7 @@ async function enrichVideosWithDetails(videos: VideoCardData[]): Promise<VideoCa
 
       // Small delay between batches to avoid rate limiting
       if (i + batchSize < videos.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
 

@@ -66,9 +66,14 @@ export function VideoSuggestions({
         let attempts = 0;
         const maxAttempts = 3;
 
-        while (allFilteredVideos.length < targetCount && attempts < maxAttempts) {
-          const response = await fetch(`/api/cache/videos?type=general&count=${fetchCount}`);
-          
+        while (
+          allFilteredVideos.length < targetCount &&
+          attempts < maxAttempts
+        ) {
+          const response = await fetch(
+            `/api/cache/videos?type=general&count=${fetchCount}`
+          );
+
           if (!response.ok) {
             throw new Error('Failed to fetch suggestions');
           }
@@ -77,16 +82,15 @@ export function VideoSuggestions({
           const fetchedVideos = data.items || [];
 
           // Filter out current video and watched videos
-          const newFilteredVideos = fetchedVideos
-            .filter(
-              (video: VideoCardData) =>
-                video.id !== currentVideoId && 
-                !watchedIds.includes(video.id) &&
-                !allFilteredVideos.some(existing => existing.id === video.id)
-            );
+          const newFilteredVideos = fetchedVideos.filter(
+            (video: VideoCardData) =>
+              video.id !== currentVideoId &&
+              !watchedIds.includes(video.id) &&
+              !allFilteredVideos.some((existing) => existing.id === video.id)
+          );
 
           allFilteredVideos = [...allFilteredVideos, ...newFilteredVideos];
-          
+
           // Increase fetch count for next attempt if needed
           fetchCount = Math.min(100, fetchCount * 1.5);
           attempts++;

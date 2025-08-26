@@ -35,7 +35,7 @@ function convertToVideoCardData(
   if ('duration' in item && 'viewCount' in item) {
     return item as VideoCardData;
   }
-  
+
   // YouTubeVideo
   const video = item as YouTubeVideo;
   return {
@@ -59,16 +59,13 @@ async function getCachedVideos(
 }> {
   try {
     // Initialize cache if needed
-    const response = await fetch(
-      `${env.SITE_URL}/api/cache/videos`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action: 'initialize_cache' }),
-      }
-    );
+    const response = await fetch(`${env.SITE_URL}/api/cache/videos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'initialize_cache' }),
+    });
 
     // Get videos from cache
     const cacheUrl = `${env.SITE_URL}/api/cache/videos?type=${type}&count=${count}`;
@@ -87,12 +84,17 @@ async function getCachedVideos(
     }
 
     const data = await videosResponse.json();
-    console.log('DEBUG: First video from cache API:', data.items?.[0] ? {
-      id: data.items[0].id,
-      title: data.items[0].title?.substring(0, 30) + '...',
-      duration: data.items[0].duration,
-      keys: Object.keys(data.items[0])
-    } : 'No items');
+    console.log(
+      'DEBUG: First video from cache API:',
+      data.items?.[0]
+        ? {
+            id: data.items[0].id,
+            title: data.items[0].title?.substring(0, 30) + '...',
+            duration: data.items[0].duration,
+            keys: Object.keys(data.items[0]),
+          }
+        : 'No items'
+    );
     return {
       videos: data.items || [], // data.items is already in VideoCardData format
     };

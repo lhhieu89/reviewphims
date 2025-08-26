@@ -171,15 +171,12 @@ export async function searchVideos({
     }
 
     // Get search results
-    const searchResponse = await fetchYouTubeApi<ListResponse<YouTubeSearchItem>>(
-      'search',
-      searchParams
-    );
+    const searchResponse = await fetchYouTubeApi<
+      ListResponse<YouTubeSearchItem>
+    >('search', searchParams);
 
     // Extract video IDs
-    const videoIds = searchResponse.items.map(
-      (item) => item.id.videoId
-    );
+    const videoIds = searchResponse.items.map((item) => item.id.videoId);
 
     if (videoIds.length === 0) {
       return {

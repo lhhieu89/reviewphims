@@ -56,7 +56,7 @@ async function fetchMoreVideosFromCache(
       `/api/cache/videos?type=${cacheType}&count=${count}`
     );
     if (!response.ok) return [];
-    
+
     const data = await response.json();
     return data.items || [];
   } catch (error) {
@@ -96,17 +96,23 @@ export function ClientVideoSection({
         try {
           // Fetch more videos from cache - get more than needed to account for more watched videos
           const additionalCount = Math.max(32, TARGET_VIDEO_COUNT * 2);
-          const moreVideos = await fetchMoreVideosFromCache(cacheType, additionalCount);
-          
-          // Add new videos that aren't already in our list and aren't watched
-          const existingIds = new Set(videos.map(v => v.id));
-          const newUnwatchedVideos = moreVideos.filter(
-            video => !existingIds.has(video.id) && !watchedIds.includes(video.id)
+          const moreVideos = await fetchMoreVideosFromCache(
+            cacheType,
+            additionalCount
           );
-          
+
+          // Add new videos that aren't already in our list and aren't watched
+          const existingIds = new Set(videos.map((v) => v.id));
+          const newUnwatchedVideos = moreVideos.filter(
+            (video) =>
+              !existingIds.has(video.id) && !watchedIds.includes(video.id)
+          );
+
           // Combine and take up to TARGET_VIDEO_COUNT
-          unwatchedVideos = [...unwatchedVideos, ...newUnwatchedVideos]
-            .slice(0, TARGET_VIDEO_COUNT);
+          unwatchedVideos = [...unwatchedVideos, ...newUnwatchedVideos].slice(
+            0,
+            TARGET_VIDEO_COUNT
+          );
         } catch (error) {
           console.error('Error fetching additional videos:', error);
         } finally {
