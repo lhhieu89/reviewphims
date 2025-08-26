@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { SearchBarWrapper } from './SearchBarWrapper';
-import { FilmIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
 
 export function Header() {
   return (
@@ -11,7 +11,13 @@ export function Header() {
             href="/"
             className="flex items-center gap-2 font-bold text-xl text-foreground hover:text-primary transition-colors"
           >
-            <FilmIcon className="h-6 w-6" />
+            <Image
+              src="/logo.svg"
+              alt="Review Phim Logo"
+              width={24}
+              height={24}
+              className="h-6 w-6"
+            />
             Review Phim
           </Link>
         </div>
