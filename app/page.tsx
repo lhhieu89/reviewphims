@@ -59,10 +59,11 @@ async function getCachedVideos(
 }> {
   try {
     // Use localhost for server-side fetching since we're in Docker
-    const baseUrl = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3001'  // Internal Docker port
-      : env.SITE_URL;
-    
+    const baseUrl =
+      process.env.NODE_ENV === 'development'
+        ? 'http://localhost:3001' // Internal Docker port
+        : env.SITE_URL;
+
     // Initialize cache if needed
     const initResponse = await fetch(`${baseUrl}/api/cache/videos`, {
       method: 'POST',
@@ -74,7 +75,6 @@ async function getCachedVideos(
 
     // Get videos from cache
     const cacheUrl = `${baseUrl}/api/cache/videos?type=${type}&count=${count}`;
-    console.log('DEBUG: Fetching from URL:', cacheUrl);
     const videosResponse = await fetch(cacheUrl, {
       next: { revalidate: 300 }, // Cache for 5 minutes
     });
@@ -89,17 +89,6 @@ async function getCachedVideos(
     }
 
     const data = await videosResponse.json();
-    console.log(
-      'DEBUG: First video from cache API:',
-      data.items?.[0]
-        ? {
-            id: data.items[0].id,
-            title: data.items[0].title?.substring(0, 30) + '...',
-            duration: data.items[0].duration,
-            keys: Object.keys(data.items[0]),
-          }
-        : 'No items'
-    );
     return {
       videos: data.items || [], // data.items is already in VideoCardData format
     };

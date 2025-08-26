@@ -194,9 +194,8 @@ export async function searchVideos({
       maxResults: maxResults.toString(),
     };
 
-    if (pageToken) {
-      videoParams.pageToken = pageToken;
-    }
+    // Note: pageToken is not needed for videos API when using specific IDs
+    // pageToken is only used for search API pagination
 
     const videoResponse = await fetchYouTubeApi<ListResponse<YouTubeVideo>>(
       'videos',

@@ -1,2 +1,4 @@
 - Luôn phản hồi bằng tiếng Việt
 - Trang web này là trang tiếng Việt nên text sinh ra cũng hãy dùng tiếng Việt
+- Không cần viết test, không hỏi có cần test e2e không
+- Sau khi code xong thì chạy docker composer build và đảm bảo build thành công

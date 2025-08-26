@@ -50,9 +50,11 @@ export async function generateMetadata({
 async function enrichVideosWithDetails(
   videos: VideoCardData[]
 ): Promise<VideoCardData[]> {
-  console.log(`DEBUG: Enriching ${videos.length} videos - DISABLED FOR DEBUGGING`);
+  console.log(
+    `DEBUG: Enriching ${videos.length} videos - DISABLED FOR DEBUGGING`
+  );
   return videos; // TEMPORARY: Return original videos without enrichment
-  
+
   try {
     // Process videos in batches of 10 (YouTube API limit for video details)
     const batchSize = 10;
@@ -113,9 +115,10 @@ async function searchVideos(query: string): Promise<{
     });
 
     // Use internal Docker port for server-side fetching
-    const baseUrl = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3001'  // Internal Docker port
-      : env.SITE_URL;
+    const baseUrl =
+      process.env.NODE_ENV === 'development'
+        ? 'http://localhost:3001' // Internal Docker port
+        : env.SITE_URL;
 
     const response = await fetch(
       `${baseUrl}/api/youtube/search?${params.toString()}`,
@@ -139,15 +142,18 @@ async function searchVideos(query: string): Promise<{
         publishedAt: item.snippet.publishedAt,
         thumbnails: item.snippet.thumbnails,
         // Include duration and viewCount if available (from crawler)
-        duration: item.contentDetails?.duration,
-        viewCount: item.statistics?.viewCount,
+        // Use type assertion for crawler data that includes extra fields
+        duration: (item as any).contentDetails?.duration,
+        viewCount: (item as any).statistics?.viewCount,
       }))
       .filter((video) => video.id); // Filter out videos with undefined IDs
 
     // Skip enrichment if data comes from crawler (already has complete data)
     const isFromCrawler = (data as any).isCrawlerData;
-    console.log(`DEBUG: Search ${query} - isFromCrawler: ${isFromCrawler}, videos: ${basicVideos.length}`);
-    
+    console.log(
+      `DEBUG: Search ${query} - isFromCrawler: ${isFromCrawler}, videos: ${basicVideos.length}`
+    );
+
     // TEMPORARY: Always skip enrichment to identify the issue
     const enrichedVideos = basicVideos;
 

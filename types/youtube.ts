@@ -106,6 +106,7 @@ export interface ListResponse<T> {
   regionCode?: string;
   pageInfo: PageInfo;
   items: T[];
+  isCrawlerData?: boolean; // Flag to indicate if data comes from crawler
 }
 
 export interface YouTubeError {

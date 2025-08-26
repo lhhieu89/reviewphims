@@ -75,8 +75,16 @@ export function ClientVideoSection({
 }: ClientVideoSectionProps) {
   const [filteredVideos, setFilteredVideos] = useState<VideoCardData[]>(videos);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Handle mounting to prevent hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
+    if (!isMounted) return; // Prevent running on server
+
     const ensureEnoughVideos = async () => {
       const watchedIds = getWatchedVideoIds();
 
@@ -127,12 +135,17 @@ export function ClientVideoSection({
     };
 
     ensureEnoughVideos();
-  }, [videos, cacheType]);
+  }, [videos, cacheType, isMounted]);
+
+  // Show initial videos during SSR and until mounted
+  const displayVideos = isMounted
+    ? filteredVideos
+    : videos.slice(0, TARGET_VIDEO_COUNT);
 
   return (
     <ReviewSection
       title={title}
-      videos={filteredVideos}
+      videos={displayVideos}
       viewAllLink={viewAllLink}
       error={error || (isLoadingMore ? 'Đang tải thêm video...' : undefined)}
       fallbackUrl={fallbackUrl}
