@@ -55,13 +55,19 @@ export function InfiniteVideoGrid({
 
       const data = await response.json();
 
-      const newVideos: VideoCardData[] = data.items.map((item: any) => ({
-        id: item.id.videoId,
-        title: item.snippet.title,
-        channelTitle: item.snippet.channelTitle,
-        publishedAt: item.snippet.publishedAt,
-        thumbnails: item.snippet.thumbnails,
-      }));
+      const newVideos: VideoCardData[] = data.items
+        .map((item: any) => ({
+          // Handle both API and crawler response structures
+          id: typeof item.id === 'string' ? item.id : item.id?.videoId,
+          title: item.snippet.title,
+          channelTitle: item.snippet.channelTitle,
+          publishedAt: item.snippet.publishedAt,
+          thumbnails: item.snippet.thumbnails,
+          // Include duration and viewCount if available (from crawler)
+          duration: item.contentDetails?.duration,
+          viewCount: item.statistics?.viewCount,
+        }))
+        .filter((video: VideoCardData) => video.id); // Filter out videos with undefined IDs
 
       // Filter out duplicates based on video ID
       setVideos((prev) => {

@@ -60,7 +60,7 @@ async function getCachedVideos(
   try {
     // Use localhost for server-side fetching since we're in Docker
     const baseUrl = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000'  // Internal Docker port
+      ? 'http://localhost:3001'  // Internal Docker port
       : env.SITE_URL;
     
     // Initialize cache if needed

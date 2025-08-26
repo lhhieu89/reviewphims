@@ -615,6 +615,7 @@ export async function crawlSearchVideos(
         resultsPerPage: items.length,
       },
       items,
+      isCrawlerData: true, // Flag to indicate data comes from crawler
     };
 
     // Lưu vào cache
@@ -851,6 +852,7 @@ export async function crawlMostPopular(
         resultsPerPage: videos.length,
       },
       items: videos,
+      isCrawlerData: true, // Flag to indicate data comes from crawler
     };
   } catch (error) {
     console.error('Error parsing trending videos:', error);

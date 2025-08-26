@@ -50,6 +50,9 @@ export async function generateMetadata({
 async function enrichVideosWithDetails(
   videos: VideoCardData[]
 ): Promise<VideoCardData[]> {
+  console.log(`DEBUG: Enriching ${videos.length} videos - DISABLED FOR DEBUGGING`);
+  return videos; // TEMPORARY: Return original videos without enrichment
+  
   try {
     // Process videos in batches of 10 (YouTube API limit for video details)
     const batchSize = 10;
@@ -57,7 +60,7 @@ async function enrichVideosWithDetails(
 
     for (let i = 0; i < videos.length; i += batchSize) {
       const batch = videos.slice(i, i + batchSize);
-      const videoIds = batch.map((v) => v.id);
+      const videoIds = batch.map((v) => v.id).filter((id) => id); // Filter out undefined IDs
 
       // Get video details for this batch
       const enrichPromises = videoIds.map(async (id) => {
@@ -102,6 +105,7 @@ async function searchVideos(query: string): Promise<{
   nextPageToken?: string;
   totalResults?: number;
 }> {
+  console.log(`DEBUG: searchVideos called with query="${query}"`);
   try {
     const params = new URLSearchParams({
       q: query,
@@ -110,7 +114,7 @@ async function searchVideos(query: string): Promise<{
 
     // Use internal Docker port for server-side fetching
     const baseUrl = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000'  // Internal Docker port
+      ? 'http://localhost:3001'  // Internal Docker port
       : env.SITE_URL;
 
     const response = await fetch(
@@ -126,16 +130,26 @@ async function searchVideos(query: string): Promise<{
 
     const data: ListResponse<YouTubeSearchItem> = await response.json();
 
-    const basicVideos: VideoCardData[] = data.items.map((item) => ({
-      id: item.id.videoId,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
-      publishedAt: item.snippet.publishedAt,
-      thumbnails: item.snippet.thumbnails,
-    }));
+    const basicVideos: VideoCardData[] = data.items
+      .map((item) => ({
+        // Handle both API and crawler response structures
+        id: typeof item.id === 'string' ? item.id : item.id?.videoId,
+        title: item.snippet.title,
+        channelTitle: item.snippet.channelTitle,
+        publishedAt: item.snippet.publishedAt,
+        thumbnails: item.snippet.thumbnails,
+        // Include duration and viewCount if available (from crawler)
+        duration: item.contentDetails?.duration,
+        viewCount: item.statistics?.viewCount,
+      }))
+      .filter((video) => video.id); // Filter out videos with undefined IDs
 
-    // Enrich videos with duration and view count
-    const enrichedVideos = await enrichVideosWithDetails(basicVideos);
+    // Skip enrichment if data comes from crawler (already has complete data)
+    const isFromCrawler = (data as any).isCrawlerData;
+    console.log(`DEBUG: Search ${query} - isFromCrawler: ${isFromCrawler}, videos: ${basicVideos.length}`);
+    
+    // TEMPORARY: Always skip enrichment to identify the issue
+    const enrichedVideos = basicVideos;
 
     return {
       videos: enrichedVideos,
@@ -152,6 +166,7 @@ async function searchVideos(query: string): Promise<{
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const query = searchParams.q || '';
+  console.log(`DEBUG: SearchPage rendered with query="${query}"`);
 
   if (!query) {
     return (
