@@ -58,8 +58,13 @@ async function getCachedVideos(
   fallbackUrl?: string;
 }> {
   try {
+    // Use localhost for server-side fetching since we're in Docker
+    const baseUrl = process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3000'  // Internal Docker port
+      : env.SITE_URL;
+    
     // Initialize cache if needed
-    const response = await fetch(`${env.SITE_URL}/api/cache/videos`, {
+    const initResponse = await fetch(`${baseUrl}/api/cache/videos`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -68,7 +73,7 @@ async function getCachedVideos(
     });
 
     // Get videos from cache
-    const cacheUrl = `${env.SITE_URL}/api/cache/videos?type=${type}&count=${count}`;
+    const cacheUrl = `${baseUrl}/api/cache/videos?type=${type}&count=${count}`;
     console.log('DEBUG: Fetching from URL:', cacheUrl);
     const videosResponse = await fetch(cacheUrl, {
       next: { revalidate: 300 }, // Cache for 5 minutes
