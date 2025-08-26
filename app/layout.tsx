@@ -122,6 +122,37 @@ export default function RootLayout({
           href={`${env.SITE_URL}/feed.xml`}
         />
         <link rel="author" href={`${env.SITE_URL}/humans.txt`} />
+        
+        {/* Google Analytics */}
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-75RRL9R41X"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-75RRL9R41X');
+            `,
+          }}
+        />
+        
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-XC0MPSL3M2"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-XC0MPSL3M2');
+            `,
+          }}
+        />
       </head>
       <body className={inter.className}>
         <div className="min-h-screen flex flex-col">
