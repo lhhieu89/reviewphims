@@ -487,7 +487,7 @@ export async function crawlVideoById(id: string): Promise<YouTubeVideo | null> {
 export async function crawlSearchVideos(
   query: string,
   maxResults: number = 20
-): Promise<ListResponse<YouTubeSearchItem>> {
+): Promise<ListResponse<YouTubeVideo>> {
   // Kiểm tra cache
   const cacheKey = `search:${query}:${maxResults}`;
   const cached = cache.get(cacheKey);
@@ -504,7 +504,7 @@ export async function crawlSearchVideos(
 
   if (!document) {
     return {
-      kind: 'youtube#searchListResponse',
+      kind: 'youtube#videoListResponse',
       etag: '',
       pageInfo: { totalResults: 0, resultsPerPage: 0 },
       items: [],
@@ -514,7 +514,7 @@ export async function crawlSearchVideos(
   const ytData = extractYtInitialData(document);
   if (!ytData) {
     return {
-      kind: 'youtube#searchListResponse',
+      kind: 'youtube#videoListResponse',
       etag: '',
       pageInfo: { totalResults: 0, resultsPerPage: 0 },
       items: [],
@@ -525,7 +525,7 @@ export async function crawlSearchVideos(
     const contents =
       ytData.contents?.twoColumnSearchResultsRenderer?.primaryContents
         ?.sectionListRenderer?.contents || [];
-    const items: YouTubeSearchItem[] = [];
+    const items: YouTubeVideo[] = [];
 
     // Tìm phần tử chứa kết quả tìm kiếm
     for (const section of contents) {
@@ -552,15 +552,21 @@ export async function crawlSearchVideos(
             .join('') || '';
         const publishedAtText =
           videoRenderer.publishedTimeText?.simpleText || null;
+        const viewCountText =
+          videoRenderer.viewCountText?.simpleText ||
+          videoRenderer.viewCountText?.runs?.[0]?.text ||
+          '0';
+        const viewCount = viewCountText.replace(/[^\d]/g, '');
+        const durationText =
+          videoRenderer.lengthText?.simpleText ||
+          videoRenderer.lengthText?.runs?.[0]?.text ||
+          null;
 
-        // Tạo đối tượng kết quả tìm kiếm
-        const searchItem: YouTubeSearchItem = {
-          kind: 'youtube#searchResult',
+        // Tạo đối tượng video
+        const video: YouTubeVideo = {
+          kind: 'youtube#video',
           etag: '',
-          id: {
-            kind: 'youtube#video',
-            videoId,
-          },
+          id: videoId,
           snippet: {
             publishedAt: parsePublishedTime(publishedAtText),
             channelId,
@@ -568,12 +574,31 @@ export async function crawlSearchVideos(
             description,
             thumbnails: createThumbnails(videoId),
             channelTitle,
+            categoryId: '0',
             liveBroadcastContent: 'none',
-            publishTime: parsePublishedTime(publishedAtText),
+            localized: {
+              title,
+              description,
+            },
+          },
+          contentDetails: {
+            duration: formatDuration(durationText),
+            dimension: 'hd',
+            definition: 'hd',
+            caption: 'false',
+            licensedContent: false,
+            contentRating: {},
+            projection: 'rectangular',
+          },
+          statistics: {
+            viewCount,
+            likeCount: '0',
+            favoriteCount: '0',
+            commentCount: '0',
           },
         };
 
-        items.push(searchItem);
+        items.push(video);
 
         // Giới hạn số lượng kết quả
         if (items.length >= maxResults) break;
@@ -583,7 +608,7 @@ export async function crawlSearchVideos(
     }
 
     const result = {
-      kind: 'youtube#searchListResponse',
+      kind: 'youtube#videoListResponse',
       etag: '',
       pageInfo: {
         totalResults: items.length,
@@ -600,9 +625,9 @@ export async function crawlSearchVideos(
 
     return result;
   } catch (error) {
-    console.error(`Error parsing search results for "${query}":`, error);
+    console.error(`Error parsing search results for ${query}:`, error);
     return {
-      kind: 'youtube#searchListResponse',
+      kind: 'youtube#videoListResponse',
       etag: '',
       pageInfo: { totalResults: 0, resultsPerPage: 0 },
       items: [],

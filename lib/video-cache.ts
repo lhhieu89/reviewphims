@@ -1,5 +1,5 @@
-import { VideoCardData, YouTubeSearchItem } from '@/types/youtube';
-import { searchVideos } from '@/lib/youtube';
+import { VideoCardData, YouTubeVideo } from '@/types/youtube';
+import { searchVideos, getVideoById } from '@/lib/youtube';
 import { getRandomKeyword } from '@/lib/review-keywords';
 
 interface CacheData {
@@ -18,13 +18,22 @@ class VideoCache {
   private readonly WATCHED_COOKIE_NAME = 'watched_videos';
 
   // Helper to convert API response to VideoCardData
-  private convertToVideoCardData(item: YouTubeSearchItem): VideoCardData {
+  private convertToVideoCardData(item: YouTubeVideo): VideoCardData {
     return {
-      id: typeof item.id === 'string' ? item.id : item.id.videoId,
+      id: item.id,
       title: item.snippet.title,
       channelTitle: item.snippet.channelTitle,
       publishedAt: item.snippet.publishedAt,
+      viewCount: item.statistics?.viewCount,
       thumbnails: item.snippet.thumbnails,
+      duration: item.contentDetails?.duration,
+      description: item.snippet.description,
+      channelId: item.snippet.channelId,
+      categoryId: item.snippet.categoryId,
+      liveBroadcastContent: item.snippet.liveBroadcastContent,
+      localized: item.snippet.localized,
+      contentDetails: item.contentDetails,
+      statistics: item.statistics,
     };
   }
 

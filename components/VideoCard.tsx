@@ -36,6 +36,7 @@ export function VideoCard({
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
         )}
+        {/* Duration overlay */}
         {video.duration && (
           <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
             {formatDuration(video.duration)}

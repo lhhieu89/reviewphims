@@ -4,6 +4,7 @@ import { SearchBarWrapper } from '@/components/SearchBarWrapper';
 import { GenreFilter } from '@/components/GenreFilter';
 import { env } from '@/lib/env';
 import { formatNumber } from '@/lib/format';
+import { getVideoById } from '@/lib/youtube';
 import type {
   ListResponse,
   YouTubeSearchItem,
@@ -45,6 +46,55 @@ export async function generateMetadata({
   };
 }
 
+// Enrich videos with additional data (duration, viewCount) from videos API
+async function enrichVideosWithDetails(videos: VideoCardData[]): Promise<VideoCardData[]> {
+  try {
+    // Process videos in batches of 10 (YouTube API limit for video details)
+    const batchSize = 10;
+    const enrichedVideos: VideoCardData[] = [];
+
+    for (let i = 0; i < videos.length; i += batchSize) {
+      const batch = videos.slice(i, i + batchSize);
+      const videoIds = batch.map(v => v.id);
+      
+      // Get video details for this batch
+      const enrichPromises = videoIds.map(async (id) => {
+        try {
+          const videoDetail = await getVideoById({ id });
+          return videoDetail;
+        } catch (error) {
+          console.warn(`Failed to get details for video ${id}:`, error);
+          return null;
+        }
+      });
+
+      const videoDetails = await Promise.all(enrichPromises);
+
+      // Merge original data with enriched data
+      for (let j = 0; j < batch.length; j++) {
+        const originalVideo = batch[j];
+        const details = videoDetails[j];
+
+        enrichedVideos.push({
+          ...originalVideo,
+          duration: details?.contentDetails?.duration,
+          viewCount: details?.statistics?.viewCount,
+        });
+      }
+
+      // Small delay between batches to avoid rate limiting
+      if (i + batchSize < videos.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    return enrichedVideos;
+  } catch (error) {
+    console.warn('Failed to enrich videos with details:', error);
+    return videos; // Return original videos if enrichment fails
+  }
+}
+
 async function searchVideos(query: string): Promise<{
   videos: VideoCardData[];
   nextPageToken?: string;
@@ -69,7 +119,7 @@ async function searchVideos(query: string): Promise<{
 
     const data: ListResponse<YouTubeSearchItem> = await response.json();
 
-    const videos: VideoCardData[] = data.items.map((item) => ({
+    const basicVideos: VideoCardData[] = data.items.map((item) => ({
       id: item.id.videoId,
       title: item.snippet.title,
       channelTitle: item.snippet.channelTitle,
@@ -77,8 +127,11 @@ async function searchVideos(query: string): Promise<{
       thumbnails: item.snippet.thumbnails,
     }));
 
+    // Enrich videos with duration and view count
+    const enrichedVideos = await enrichVideosWithDetails(basicVideos);
+
     return {
-      videos,
+      videos: enrichedVideos,
       nextPageToken: data.nextPageToken,
       totalResults: data.pageInfo.totalResults,
     };

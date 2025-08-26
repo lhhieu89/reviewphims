@@ -128,4 +128,28 @@ export interface VideoCardData {
   viewCount?: string;
   thumbnails: YouTubeThumbnails;
   duration?: string;
+  description?: string;
+  channelId?: string;
+  categoryId?: string;
+  liveBroadcastContent?: string;
+  localized?: {
+    title: string;
+    description: string;
+  };
+  contentDetails?: {
+    duration: string;
+    dimension: string;
+    definition: string;
+    caption: string;
+    licensedContent: boolean;
+    contentRating: Record<string, unknown>;
+    projection: string;
+  };
+  statistics?: {
+    viewCount: string;
+    likeCount?: string;
+    dislikeCount?: string;
+    favoriteCount: string;
+    commentCount?: string;
+  };
 }

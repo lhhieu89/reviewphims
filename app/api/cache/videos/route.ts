@@ -11,11 +11,24 @@ export async function GET(request: NextRequest) {
 
     // Get random videos from cache
     let videos = videoCache.getRandomVideos(type, count);
+    console.log('DEBUG (Cache API): First video before refresh:', videos[0] ? {
+      id: videos[0].id,
+      title: videos[0].title?.substring(0, 30) + '...',
+      duration: videos[0].duration,
+      keys: Object.keys(videos[0])
+    } : 'No videos');
 
     // If cache is empty or insufficient videos, try to fetch and cache
     if (videos.length < count) {
+      console.log('DEBUG (Cache API): Not enough videos, fetching more...');
       await videoCache.fetchAndCacheVideos(type, 200);
       videos = videoCache.getRandomVideos(type, count);
+      console.log('DEBUG (Cache API): First video after refresh:', videos[0] ? {
+        id: videos[0].id,
+        title: videos[0].title?.substring(0, 30) + '...',
+        duration: videos[0].duration,
+        keys: Object.keys(videos[0])
+      } : 'No videos');
     }
 
     return NextResponse.json(

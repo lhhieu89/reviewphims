@@ -10,7 +10,7 @@ import { env } from '@/lib/env';
 
 // Remove force-dynamic to enable better caching
 // export const dynamic = 'force-dynamic';
-export const revalidate = 3600; // 1 hour
+export const revalidate = 300; // 5 minutes - reduced for easier testing
 
 export const metadata: Metadata = {
   title: 'Review Phim - Xem Review Phim Mới Nhất 2025',
@@ -29,29 +29,24 @@ export const metadata: Metadata = {
 
 // Helper function to convert different video types to VideoCardData
 function convertToVideoCardData(
-  item: YouTubeVideo | YouTubeSearchItem
+  item: YouTubeVideo | VideoCardData
 ): VideoCardData {
-  if ('statistics' in item) {
-    // YouTubeVideo
-    return {
-      id: item.id,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
-      publishedAt: item.snippet.publishedAt,
-      viewCount: item.statistics?.viewCount,
-      thumbnails: item.snippet.thumbnails,
-      duration: item.contentDetails?.duration,
-    };
-  } else {
-    // YouTubeSearchItem
-    return {
-      id: typeof item.id === 'string' ? item.id : item.id.videoId,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
-      publishedAt: item.snippet.publishedAt,
-      thumbnails: item.snippet.thumbnails,
-    };
+  // If it's already VideoCardData (from cache API), return as is
+  if ('duration' in item && 'viewCount' in item) {
+    return item as VideoCardData;
   }
+  
+  // YouTubeVideo
+  const video = item as YouTubeVideo;
+  return {
+    id: video.id,
+    title: video.snippet.title,
+    channelTitle: video.snippet.channelTitle,
+    publishedAt: video.snippet.publishedAt,
+    viewCount: video.statistics?.viewCount,
+    thumbnails: video.snippet.thumbnails,
+    duration: video.contentDetails?.duration,
+  };
 }
 
 async function getCachedVideos(
@@ -63,15 +58,27 @@ async function getCachedVideos(
   fallbackUrl?: string;
 }> {
   try {
+    // Initialize cache if needed
     const response = await fetch(
-      `${env.SITE_URL}/api/cache/videos?type=${type}&count=${count}`,
+      `${env.SITE_URL}/api/cache/videos`,
       {
-        next: { revalidate: 300 }, // Cache for 5 minutes
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'initialize_cache' }),
       }
     );
 
-    if (!response.ok) {
-      const errorData = await response.json();
+    // Get videos from cache
+    const cacheUrl = `${env.SITE_URL}/api/cache/videos?type=${type}&count=${count}`;
+    console.log('DEBUG: Fetching from URL:', cacheUrl);
+    const videosResponse = await fetch(cacheUrl, {
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    });
+
+    if (!videosResponse.ok) {
+      const errorData = await videosResponse.json();
       return {
         videos: [],
         error: errorData.error || 'Failed to fetch cached videos',
@@ -79,9 +86,15 @@ async function getCachedVideos(
       };
     }
 
-    const data = await response.json();
+    const data = await videosResponse.json();
+    console.log('DEBUG: First video from cache API:', data.items?.[0] ? {
+      id: data.items[0].id,
+      title: data.items[0].title?.substring(0, 30) + '...',
+      duration: data.items[0].duration,
+      keys: Object.keys(data.items[0])
+    } : 'No items');
     return {
-      videos: data.items || [],
+      videos: data.items || [], // data.items is already in VideoCardData format
     };
   } catch (error) {
     console.error(`Error fetching cached videos for ${type}:`, error);

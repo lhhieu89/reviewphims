@@ -143,36 +143,79 @@ export async function searchVideos({
   safeSearch = 'moderate',
   relevanceLanguage = 'vi',
   videoEmbeddable = 'true',
-}: SearchVideosParams): Promise<ListResponse<YouTubeSearchItem>> {
-  const params: Record<string, string> = {
-    part: 'snippet',
-    type: 'video',
-    q: q,
-    maxResults: maxResults.toString(),
-    regionCode,
-    order,
-    safeSearch,
-    relevanceLanguage,
-    videoEmbeddable,
-  };
-
-  if (pageToken) {
-    params.pageToken = pageToken;
-  }
-
-  if (videoCategoryId) {
-    params.videoCategoryId = videoCategoryId;
-  }
-
-  if (videoDuration) {
-    params.videoDuration = videoDuration;
-  }
-
+}: SearchVideosParams): Promise<ListResponse<YouTubeVideo>> {
   try {
-    return await fetchYouTubeApi<ListResponse<YouTubeSearchItem>>(
+    // First, search for videos to get IDs
+    const searchParams: Record<string, string> = {
+      part: 'snippet',
+      type: 'video',
+      q: q,
+      maxResults: maxResults.toString(),
+      regionCode,
+      order,
+      safeSearch,
+      relevanceLanguage,
+      videoEmbeddable,
+    };
+
+    if (pageToken) {
+      searchParams.pageToken = pageToken;
+    }
+
+    if (videoCategoryId) {
+      searchParams.videoCategoryId = videoCategoryId;
+    }
+
+    if (videoDuration) {
+      searchParams.videoDuration = videoDuration;
+    }
+
+    // Get search results
+    const searchResponse = await fetchYouTubeApi<ListResponse<YouTubeSearchItem>>(
       'search',
-      params
+      searchParams
     );
+
+    // Extract video IDs
+    const videoIds = searchResponse.items.map(
+      (item) => item.id.videoId
+    );
+
+    if (videoIds.length === 0) {
+      return {
+        kind: 'youtube#videoListResponse',
+        etag: '',
+        items: [],
+        pageInfo: { totalResults: 0, resultsPerPage: 0 },
+      };
+    }
+
+    // Get video details
+    const videoParams: Record<string, string> = {
+      part: 'snippet,contentDetails,statistics',
+      id: videoIds.join(','),
+      maxResults: maxResults.toString(),
+    };
+
+    if (pageToken) {
+      videoParams.pageToken = pageToken;
+    }
+
+    const videoResponse = await fetchYouTubeApi<ListResponse<YouTubeVideo>>(
+      'videos',
+      videoParams
+    );
+
+    // Return video details with search metadata
+    return {
+      kind: 'youtube#videoListResponse',
+      etag: videoResponse.etag,
+      items: videoResponse.items,
+      pageInfo: searchResponse.pageInfo,
+      nextPageToken: searchResponse.nextPageToken,
+      prevPageToken: searchResponse.prevPageToken,
+      regionCode: searchResponse.regionCode,
+    };
   } catch (error) {
     // Nếu hết quota API, sử dụng phương pháp crawl
     if (isQuotaExceededError(error)) {

@@ -1,39 +1,28 @@
-import type { Metadata } from 'next';
+import { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import './globals.css';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { CacheInitializer } from '@/components/CacheInitializer';
 import { env } from '@/lib/env';
+import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(env.SITE_URL),
   title: {
-    default: 'Review Phim - Khám phá video phim hay nhất',
     template: '%s | Review Phim',
+    default: 'Review Phim - Xem Review Phim Mới Nhất 2025',
   },
   description:
-    'Khám phá và xem những video phim hay nhất từ YouTube. Tìm kiếm, xem và chia sẻ những bộ phim yêu thích của bạn.',
-  keywords: ['phim', 'video', 'youtube', 'review', 'trailer', 'cinema'],
-  authors: [{ name: 'Review Phim' }],
-  creator: 'Review Phim',
-  publisher: 'Review Phim',
-  metadataBase: new URL(env.SITE_URL),
-  openGraph: {
-    type: 'website',
-    locale: 'vi_VN',
-    url: env.SITE_URL,
-    title: 'Review Phim - Khám phá video phim hay nhất',
-    description:
-      'Khám phá và xem những video phim hay nhất từ YouTube. Tìm kiếm, xem và chia sẻ những bộ phim yêu thích của bạn.',
-    siteName: 'Review Phim',
+    'Khám phá những video review phim mới nhất và hay nhất từ YouTube. Tìm kiếm, xem và chia sẻ những bộ phim được đánh giá cao.',
+  alternates: {
+    canonical: '/',
   },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Review Phim - Khám phá video phim hay nhất',
+  openGraph: {
+    title: 'Review Phim - Khám phá video review phim hay nhất',
     description:
-      'Khám phá và xem những video phim hay nhất từ YouTube. Tìm kiếm, xem và chia sẻ những bộ phim yêu thích của bạn.',
+      'Khám phá những video review phim mới nhất và hay nhất từ YouTube. Review phim Việt, phim quốc tế, tất cả thể loại.',
+    url: '/',
   },
   robots: {
     index: true,
@@ -56,7 +45,6 @@ export default function RootLayout({
   return (
     <html lang="vi" suppressHydrationWarning>
       <body className={inter.className}>
-        <CacheInitializer />
         <div className="min-h-screen flex flex-col">
           <Header />
           <main className="flex-1">{children}</main>
